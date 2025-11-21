@@ -38,7 +38,6 @@ app.layout = html.Div([
 # --- 3. Callback หลัก: การจัดการ Routing ---
 @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
 def render_page_content(pathname):
-    """Callback สำหรับโหลดเนื้อหาของแต่ละหน้าตาม URL"""
     
     if pathname == "/" or pathname == "/home":
         return home.layout

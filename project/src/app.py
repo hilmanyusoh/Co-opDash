@@ -4,7 +4,6 @@ import dash
 import dash_bootstrap_components as dbc
 
 # สร้าง Dash Instance
-# external_stylesheets ถูกรวมเข้าไว้ที่นี่เพื่อให้เรียกใช้ Icon ได้ง่ายขึ้น
 app = dash.Dash(
     __name__, 
     external_stylesheets=[

@@ -25,9 +25,18 @@ def render_sidebar():
             html.P("ระบบจัดการและวิเคราะห์ข้อมูลสมาชิก", className="lead"),
             dbc.Nav(
                 [
-                    dbc.NavLink("Home (บันทึกข้อมูล)", href="/home", id="page-home", active="exact"),
-                    dbc.NavLink("Dashboard Analysis", href="/analysis", id="page-analysis", active="exact"),
-                    dbc.NavLink("Data Review & Search", href="/review", id="page-review", active="exact"),
+                    dbc.NavLink("Home", 
+                                href="/home", 
+                                id="page-home", 
+                                active="exact"),
+                    dbc.NavLink("Dashboard Analysis", 
+                                href="/analysis", 
+                                id="page-analysis", 
+                                active="exact"),
+                    dbc.NavLink("Data Review & Search", 
+                                href="/review", 
+                                id="page-review", 
+                                active="exact"),
                 ],
                 vertical=True,
                 pills=True,
@@ -35,7 +44,10 @@ def render_sidebar():
             ),
             html.Div(
                 f"อัปเดต ณ: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}",
-                style={'position': 'absolute', 'bottom': '10px', 'fontSize': '0.75rem', 'color': '#777'}
+                style={'position': 'absolute', 
+                       'bottom': '10px', 
+                       'fontSize': '0.75rem', 
+                       'color': '#777'}
             )
         ],
         style=SIDEBAR_STYLE,

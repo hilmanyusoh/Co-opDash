@@ -23,7 +23,8 @@ def get_mongo_client():
 
 def calculate_age_from_dob(dob_str):
     """ฟังก์ชัน helper สำหรับคำนวณอายุจากสตริงวันที่ DD/MM/YYYY"""
-    if not dob_str or not str(dob_str).strip(): return np.nan
+    if not dob_str or not str(dob_str).strip(): 
+        return np.nan
     try:
         dob = datetime.datetime.strptime(str(dob_str).strip(), '%d/%m/%Y')
         TODAY = datetime.datetime.now()
@@ -35,7 +36,8 @@ def calculate_age_from_dob(dob_str):
 def load_data():
     """โหลดข้อมูลและเตรียมข้อมูลสำหรับการวิเคราะห์จาก MongoDB"""
     client, status = get_mongo_client()
-    if not status: return pd.DataFrame()
+    if not status: 
+        return pd.DataFrame()
 
     db = client[DB_NAME]
     collection = db[COLLECTION_NAME]
@@ -49,7 +51,8 @@ def load_data():
 
     # --- การทำความสะอาดข้อมูล (ใช้โค้ดเดิม) ---
     df.columns = df.columns.str.strip()
-    if 'รหัสสมาชิก' not in df.columns or df['รหัสสมาชิก'].isnull().all(): return pd.DataFrame()
+    if 'รหัสสมาชิก' not in df.columns or df['รหัสสมาชิก'].isnull().all(): 
+        return pd.DataFrame()
 
     if 'รายได้ (บาท)' in df.columns:
         df['รายได้_Clean'] = pd.to_numeric(df['รายได้ (บาท)'].astype(str).str.replace(',', '', regex=False).replace('', np.nan), errors='coerce')
@@ -66,7 +69,11 @@ def load_data():
     if 'ว/ด/ป เกิด' in df.columns:
         df['อายุ'] = df['ว/ด/ป เกิด'].apply(calculate_age_from_dob)
         bins = [0, 25, 35, 45, 55, 150]
-        labels = ['< 25 (Gen Z)', '25-34 (Gen Y)', '35-44 (Gen X)', '45-54 (Early Boomer)', '> 55 (Boomer)']
+        labels = ['< 25 (Gen Z)', 
+                  '25-34 (Gen Y)', 
+                  '35-44 (Gen X)', 
+                  '45-54 (Early Boomer)', 
+                  '> 55 (Boomer)']
         df['ช่วงอายุ'] = pd.cut(df['อายุ'], bins=bins, labels=labels, right=False)
     else:
         df['อายุ'] = np.nan
@@ -81,12 +88,12 @@ def load_data():
 
 # ฟังก์ชันสำหรับจัดเตรียม DataFrame ก่อนแสดงผล/ส่งออก
 def prepare_df_for_export(df):
-    """ทำความสะอาด DataFrame สำหรับการแสดงผล/ส่งออก โดยลบคอลัมน์ชั่วคราวและจัดรูปแบบ"""
     df_clean = df.copy()
     cols_to_drop = [col for col in df_clean.columns if col.endswith('_dt') or col == 'รายได้_Clean']
     df_clean.drop(columns=cols_to_drop, errors='ignore', inplace=True)
     
-    if '_id' in df_clean.columns: df_clean['_id'] = df_clean['_id'].astype(str)
+    if '_id' in df_clean.columns: 
+        df_clean['_id'] = df_clean['_id'].astype(str)
         
     priority_cols = ['_id', 'รหัสสมาชิก', 'คำนำหน้า', 'ชื่อ', 'สกุล', 'อายุ', 'ช่วงอายุ', 'รหัสสาขา', 'รายได้ (บาท)', 'ว/ด/ป เกิด', 'วันที่สมัครสมาชิก', 'วันที่อนุมัติ', 'อาชีพ','ระยะเวลาอนุมัติ_วัน'] 
     current_cols = df_clean.columns.tolist()
