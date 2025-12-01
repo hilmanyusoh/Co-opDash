@@ -9,30 +9,30 @@ import datetime
 from ..data_manager import get_mongo_client, load_data, prepare_df_for_export, calculate_age_from_dob, DB_NAME, COLLECTION_NAME
 
 
-# --- 1. Layout ของหน้า Review ---
+# Layout ของหน้า Review 
 def create_review_layout():
     
     return dbc.Container(
         children=[
-            # --- ส่วน Header ที่แก้ไขใหม่ ---
+            # Header 
             html.Div(
                 [
                     html.H1(
                         className="text-white text-center fw-bolder mb-0"
                     ), 
                     html.P(
-                        "ดูภาพรวม, ค้นหาข้อมูลรายบุคคล, และดาวน์โหลดชุดข้อมูลทั้งหมด", 
+                        "ตารางข้อลูลสมาชิก", 
                         className="text-white-50 text-center mb-0"
                     ),
                 ], 
                 className="py-4 px-4 mb-5 rounded-4", 
                 style={
-                    'background': 'linear-gradient(90deg, #007bff 0%, #00bcd4 100%)', # Gradient สีส้ม/เหลือง
-                    'boxShadow': '0 4px 15px rgba(0, 123, 255, 0.5)' # เงาที่เข้ากับสี
+                    'background': 'linear-gradient(90deg, #007bff 0%, #00bcd4 100%)', 
+                    'boxShadow': '0 4px 15px rgba(0, 123, 255, 0.5)' 
                 }
             ),
             
-            # --- Search Section ---
+            # Search Section 
             dbc.Card(
                 dbc.CardBody([
                     html.Div([html.I(className="fas fa-search fa-2x text-warning me-3"), html.H3("ค้นหาสมาชิก", className="card-title mb-0 fw-bold"), html.Small(" (Search by Member ID)", className="text-muted ms-2"),],
@@ -48,7 +48,7 @@ def create_review_layout():
                 className="shadow-lg mb-5 rounded-4", style={'borderLeft': '5px solid #007bff'}
             ),
             
-            # --- Full Data Table Section ---
+            # Full Data Table Section 
             dbc.Card(
                 dbc.CardBody([
                     html.Div([html.I(className="fas fa-database fa-2x text-success me-3"), html.H3("ข้อมูลสมาชิกทั้งหมด", className="card-title mb-0 fw-bold"), html.Small(" (Complete Dataset)", className="text-muted ms-2"),],
@@ -79,7 +79,7 @@ def create_review_layout():
 layout = create_review_layout()
 
 
-# --- 2. Callbacks ของหน้า Review ---
+# Callbacks ของหน้า Review 
 def register_callbacks(app):
 
     # Callback A: ค้นหาข้อมูลสมาชิก
@@ -121,7 +121,7 @@ def register_callbacks(app):
         except Exception as e: return dbc.Alert(f"❌ เกิดข้อผิดพลาดในการค้นหา: {e}", color="danger")
 
 
-    # Callback B: สร้างตารางข้อมูลทั้งหมด
+    # Callback B: ตารางข้อมูลทั้งหมด
     @app.callback(
         Output('full-data-table', 'children'),
         [Input('url', 'pathname')]
@@ -147,7 +147,7 @@ def register_callbacks(app):
         return data_table
 
 
-    # Callback C: ดาวน์โหลดข้อมูลทั้งหมดเป็น CSV
+    # Callback C: ดาวน์โหลดข้อมูล CSV
     @app.callback(
         Output("download-dataframe-csv", "data"),
         [Input("btn-download-csv", "n_clicks")],

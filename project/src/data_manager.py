@@ -6,14 +6,13 @@ import datetime
 import numpy as np
 import json
 
-# --- 1. การกำหนดค่า MongoDB ---
+# เชื่อมต่อ MongoDB 
 MONGO_URI = "mongodb://localhost:27017/"  
 DB_NAME = "members_db"
 COLLECTION_NAME = "members"
 
-# --- 2. ฟังก์ชันการเชื่อมต่อ MongoDB ---
+# ฟังก์ชันการเชื่อมต่อ MongoDB 
 def get_mongo_client():
-    """สร้างการเชื่อมต่อ MongoDB และทดสอบสถานะ"""
     try:
         client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000) 
         client.admin.command('ping') 
@@ -34,7 +33,7 @@ def calculate_age_from_dob(dob_str):
         return np.nan
 
 def load_data():
-    """โหลดข้อมูลและเตรียมข้อมูลสำหรับการวิเคราะห์จาก MongoDB"""
+    """ดึงข้อมูลและเตรียมข้อมูลสำหรับการวิเคราะห์จาก MongoDB"""
     client, status = get_mongo_client()
     if not status: 
         return pd.DataFrame()
@@ -49,7 +48,7 @@ def load_data():
 
     if df.empty: return df
 
-    # --- การทำความสะอาดข้อมูล (ใช้โค้ดเดิม) ---
+    # การทำความสะอาดข้อมูล
     df.columns = df.columns.str.strip()
     if 'รหัสสมาชิก' not in df.columns or df['รหัสสมาชิก'].isnull().all(): 
         return pd.DataFrame()
@@ -86,7 +85,7 @@ def load_data():
     
     return df.dropna(subset=['รหัสสมาชิก'])
 
-# ฟังก์ชันสำหรับจัดเตรียม DataFrame ก่อนแสดงผล/ส่งออก
+# ฟังก์ชันสำหรับจัดเตรียม DataFrame ก
 def prepare_df_for_export(df):
     df_clean = df.copy()
     cols_to_drop = [col for col in df_clean.columns if col.endswith('_dt') or col == 'รายได้_Clean']
@@ -103,5 +102,5 @@ def prepare_df_for_export(df):
     
     return df_clean[ordered_cols + remaining_cols + timestamp_col]
 
-# โหลดข้อมูลเพียงครั้งเดียวเมื่อเริ่มต้นแอปพลิเคชัน
+# โหลดข้อมูลเมื่อเริ่มต้นแอปพลิเคชัน
 DATA_DF = load_data()

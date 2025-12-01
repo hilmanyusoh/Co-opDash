@@ -4,7 +4,7 @@ from dash import html
 import dash_bootstrap_components as dbc
 import datetime
 
-# --- 1. Layout Styles ---
+# 1. Layout Styles
 SIDEBAR_STYLE = {
     "position": "fixed",
     "top": 0,
@@ -17,7 +17,7 @@ SIDEBAR_STYLE = {
 }
 
 def render_sidebar():
-    """สร้าง Layout ของแถบด้านข้าง (Sidebar)"""
+    """Layout ของแถบด้านข้าง (Sidebar)"""
     return html.Div(
         [
             html.H2("Admin Center", className="display-4 text-primary"),

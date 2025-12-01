@@ -4,14 +4,14 @@ from dash import dcc, html
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output
 
-# --- Imports จากภายใน src/ ---
+# Imports จากภายใน src/ 
 from .app import app
 from .components.sidebar import render_sidebar 
 
 # Imports Layout และ Register Functions จากแต่ละ Page
 from .pages import home, analysis, review 
 
-# --- 1. Layout Styles ---
+# Layout Styles 
 SIDEBAR_STYLE = {
     "position": "fixed",
     "top": 0,
@@ -28,14 +28,14 @@ CONTENT_STYLE = {
     "padding": "2rem 2rem",
 }
 
-# --- 2. การจัด Layout หลักของแอปพลิเคชัน ---
+# การจัด Layout หลักของแอปพลิเคชัน 
 app.layout = html.Div([
     dcc.Location(id="url", refresh=False), 
     render_sidebar(), 
     html.Div(id="page-content", style=CONTENT_STYLE), 
 ])
 
-# --- 3. Callback หลัก: การจัดการ Routing ---
+# Callback หลัก: การจัดการ Routing 
 @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
 def render_page_content(pathname):
     
@@ -58,12 +58,12 @@ def render_page_content(pathname):
         className="p-3" 
     )
 
-# --- 4. ลงทะเบียน Callbacks ของแต่ละ Page ---
+# ลงทะเบียน Callbacks ของแต่ละ Page 
 home.register_callbacks(app)
 analysis.register_callbacks(app)
 review.register_callbacks(app)
 
-# --- 5. รันแอปพลิเคชัน ---
+# รันแอปพลิเคชัน 
 if __name__ == '__main__':
-    # รันจาก index.py เพื่อให้มั่นใจว่า Callback ถูกลงทะเบียนทั้งหมด
+    # รันจาก index.py 
     app.run(debug=True)

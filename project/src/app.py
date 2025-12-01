@@ -3,7 +3,7 @@
 import dash
 import dash_bootstrap_components as dbc
 
-# สร้าง Dash Instance
+# Dash Instance
 app = dash.Dash(
     __name__, 
     external_stylesheets=[

@@ -9,7 +9,7 @@ import datetime
 from ..data_manager import get_mongo_client, calculate_age_from_dob, DB_NAME, COLLECTION_NAME
 
 
-# --- 1. Layout ของหน้า Home ---
+# Layout ของหน้า Home 
 def create_home_layout():
     
     client_status = False
@@ -119,7 +119,7 @@ def create_home_layout():
 layout = create_home_layout()
 
 
-# --- 2. Callbacks ของหน้า Home ---
+# Callbacks ของหน้า Home 
 def register_callbacks(app):
 
     # Callback A: การคำนวณอายุแบบ Real-time
@@ -168,7 +168,7 @@ def register_callbacks(app):
         client, status = get_mongo_client()
         if not status: return dbc.Alert("❌ ไม่สามารถเชื่อมต่อ MongoDB เพื่อบันทึกข้อมูลได้", color="danger")
 
-        # 1. ตรวจสอบข้อมูลเบื้องต้น
+        # ตรวจสอบข้อมูลเบื้องต้น
         required_fields = {
             "รหัสสมาชิก": member_id, 
             "คำนำหน้า": prefix, 
@@ -181,7 +181,7 @@ def register_callbacks(app):
         if missing_fields: 
             return dbc.Alert(f"⚠️ กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน: {', '.join(missing_fields)}", color="warning")
 
-        # 2. ตรวจสอบรูปแบบข้อมูล
+        # ตรวจสอบรูปแบบข้อมูล
         try:
             int_member_id = int(str(member_id).strip()) 
             float_income = float(str(income).replace(',', '').strip())
@@ -197,7 +197,7 @@ def register_callbacks(app):
             
             return dbc.Alert(f"❌ รูปแบบข้อมูลไม่ถูกต้อง: ตรวจสอบ 'รหัสสมาชิก'/'รายได้' (ตัวเลข) และวันที่ (DD/MM/YYYY).", color="danger")
 
-        # 3. เตรียมเอกสารและบันทึกข้อมูล
+        # บันทึกข้อมูล
         new_member = {
             "รหัสสมาชิก": int_member_id, 
             "คำนำหน้า": prefix.strip(), 
