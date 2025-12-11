@@ -58,7 +58,7 @@ def render_page_content(pathname):
         className="p-3" 
     )
 
-# ลงทะเบียน Callbacks ของแต่ละ Page 
+# Callbacks ของแต่ละ Page 
 home.register_callbacks(app)
 analysis.register_callbacks(app)
 review.register_callbacks(app)
