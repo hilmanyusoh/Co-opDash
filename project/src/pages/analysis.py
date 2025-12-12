@@ -6,10 +6,12 @@ import plotly.express as px
 import pandas as pd
 import numpy as np
 
+# Imports จากภายใน src/
 from ..data_manager import load_data 
 from ..components.kpi_cards import render_kpi_cards 
 
 
+# --- Helper Functions สำหรับสร้าง Charts ---
 def create_branch_chart(df):
     if 'รหัสสาขา' not in df.columns or df['รหัสสาขา'].isnull().all(): 
         return px.bar(title="1. ไม่พบข้อมูล 'รหัสสาขา' สำหรับการวิเคราะห์")
@@ -22,7 +24,7 @@ def create_branch_chart(df):
     
     fig = px.pie(df_branch_top10, 
                  names='รหัสสาขา', 
-                 title='สัดส่วนจำนวนสมาชิกแบ่งตามรหัสสาขา', 
+                 title='1. สัดส่วนจำนวนสมาชิกแบ่งตามรหัสสาขา (Top 10)', # เพิ่มหมายเลขและ (Top 10)
                  hole=.3, template='plotly_dark') 
     fig.update_traces(textposition='inside', 
                       textinfo='percent+label', 
@@ -44,7 +46,7 @@ def create_age_distribution_chart(df):
     fig = px.bar(df_age, 
                  x='ช่วงอายุ',
                  y='จำนวนสมาชิก', 
-                 title='จำนวนสมาชิกแบ่งตามช่วงอายุ', 
+                 title='2. จำนวนสมาชิกแบ่งตามช่วงอายุ', # เพิ่มหมายเลข
                  color='ช่วงอายุ', 
                  color_discrete_sequence=px.colors.qualitative.D3, 
                  template='plotly_dark')
@@ -69,7 +71,7 @@ def create_income_by_profession_chart(df):
     fig = px.bar(df_prof_top10, 
                  x='รายได้เฉลี่ย (บาท)', 
                  y='อาชีพ', orientation='h', 
-                 title='อาชีพที่มีรายได้เฉลี่ยสูงสุด', 
+                 title='3. 10 อันดับอาชีพที่มีรายได้เฉลี่ยสูงสุด', # เพิ่มหมายเลขและ 10 อันดับ
                  color='รายได้เฉลี่ย (บาท)', 
                  color_continuous_scale=px.colors.sequential.Sunsetdark, 
                  template='plotly_dark')
@@ -86,7 +88,7 @@ def create_approval_time_chart(df):
         return px.bar(title="4. 'ระยะเวลาอนุมัติ_วัน' ถูกโหลดแล้ว แต่ไม่มีค่าที่นับได้")
     
     fig = px.histogram(df, x='ระยะเวลาอนุมัติ_วัน', nbins=20, 
-                       title='การกระจายตัวของระยะเวลาอนุมัติ(วัน)', 
+                       title='4. การกระจายตัวของระยะเวลาอนุมัติ (วัน)', # เพิ่มหมายเลข
                        template='plotly_dark')
     fig.update_xaxes(title_text='ระยะเวลาอนุมัติ (วัน)'); 
     fig.update_yaxes(title_text='จำนวนสมาชิก')
@@ -94,9 +96,11 @@ def create_approval_time_chart(df):
                       title_x=0.5)
     return fig
 
-# 1. Layout ของหน้า Analysis 
+# --- 1. Layout ของหน้า Analysis ---
 def create_analysis_layout():
+    """สร้าง Layout สำหรับหน้า Dashboard Analysis"""
     df = load_data() 
+    
     if df.empty:
         return dbc.Container(dbc.Alert([html.H4("❌ ไม่พบข้อมูลสำหรับการวิเคราะห์", 
                 className="alert-heading"), html.P("กรุณาตรวจสอบการเชื่อมต่อ MongoDB และตรวจสอบว่าใน Collection มีเอกสารอยู่หรือไม่"),], 
@@ -169,7 +173,7 @@ def create_analysis_layout():
 
 layout = create_analysis_layout()
 
-# 2. Callbacks ของหน้า Analysis
+# --- 2. Callbacks ของหน้า Analysis ---
 def register_callbacks(app):
-
+    """ลงทะเบียน Callbacks เฉพาะส่วน Analysis (ปัจจุบันไม่มี callbacks เฉพาะ)"""
     pass

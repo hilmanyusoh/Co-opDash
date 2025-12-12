@@ -21,16 +21,30 @@ def get_mongo_client():
         return None, False
 
 def calculate_age_from_dob(dob_str):
-    """ฟังก์ชัน helper สำหรับคำนวณอายุจากสตริงวันที่ DD/MM/YYYY"""
+    """ฟังก์ชัน helper สำหรับคำนวณอายุจากสตริงวันที่ DD/MM/YYYY หรือ YYYY-MM-DD"""
     if not dob_str or not str(dob_str).strip(): 
         return np.nan
+    
+    date_str = str(dob_str).strip()
+    dob = None
+    
     try:
-        dob = datetime.datetime.strptime(str(dob_str).strip(), '%d/%m/%Y')
+        dob = datetime.datetime.strptime(date_str, '%d/%m/%Y')
+    except ValueError:
+        try:
+            dob = datetime.datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S') # 
+        except ValueError:
+             try:
+                dob = datetime.datetime.strptime(date_str, '%Y-%m-%d') 
+             except ValueError:
+                 return np.nan
+                 
+    if dob:
         TODAY = datetime.datetime.now()
         age = TODAY.year - dob.year - ((TODAY.month, TODAY.day) < (dob.month, dob.day))
         return age if age >= 0 and age < 150 else np.nan
-    except ValueError:
-        return np.nan
+    
+    return np.nan
 
 def load_data():
     """ดึงข้อมูลและเตรียมข้อมูลสำหรับการวิเคราะห์จาก MongoDB"""

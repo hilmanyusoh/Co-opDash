@@ -1,65 +1,112 @@
 # src/components/kpi_cards.py
 
-import dash_bootstrap_components as dbc
 from dash import html
+import dash_bootstrap_components as dbc
 import pandas as pd
 import numpy as np
 
-def render_kpi_cards(df):
-    
-    if df.empty or 'อายุ' not in df.columns: 
-        return dbc.Row(dbc.Col(
-            dbc.Alert("ข้อมูลไม่พร้อมสำหรับการคำนวณ KPI - กรุณาตรวจสอบข้อมูลที่โหลด", color="secondary", className="text-center rounded-3 shadow-sm"),
-            width=12
-        ))
-        
-    valid_age = df['อายุ'].dropna()
-    valid_income = df['รายได้_Clean'].dropna()
-    
-    num_members = len(df)
-    avg_age = valid_age.mean() if len(valid_age) > 0 else np.nan
-    num_branches = df['รหัสสาขา'].dropna().nunique() if 'รหัสสาขา' in df.columns else 0
-    avg_income = valid_income.mean() if len(valid_income) > 0 else np.nan
-    
-    kpi_data = [
-        ("จำนวนสมาชิกทั้งหมด", f"{num_members:,}", "primary", "fas fa-users"), 
-        ("อายุเฉลี่ย", f"{avg_age:.1f}" 
-         
-         if pd.notna(avg_age) 
-         else "N/A", "info", "fas fa-birthday-cake"),
-        ("จำนวนสาขา", f"{num_branches:,}", "success", "fas fa-building"),
-        ("รายได้เฉลี่ย", f"{avg_income:,.0f}" 
-         
-         if pd.notna(avg_income) 
-         else "N/A", "warning", "fas fa-dollar-sign"),
-    ]
 
-    cards = []
-    for title, value, color, icon in kpi_data:
-        if "สมาชิก" in title:
-            trailing_text = "(ราย)"
-        elif "สาขา" in title:
-            trailing_text = "(แห่ง)"  
-        elif "อายุ" in title:
-            trailing_text = "(ปี)"
-        else:
-            trailing_text = "(บาท/เดือน)"
+def render_kpi_card(title, value, unit, icon_class, color_class):
+    
+    # กำหนดสีตามคลาสที่ให้มา (ใช้สำหรับ icon และ border)
+    color_map = {
+        'primary': '#007bff', 'purple': '#6f42c1', 'success': '#28a745', 'warning': '#ffc107', 'orange': '#fd7e14'
+    }
+    card_color = color_map.get(color_class, '#007bff')
+
+    return dbc.Card(
+        dbc.CardBody(
+            [
+                html.Div(
+                    [
+                        html.I(className=f"fas {icon_class} fa-3x me-3 text-white"),
+                        html.Div(
+                            [
+                                html.H3(title, className="card-title text-white-50 mb-0 fw-light"),
+                                html.H2(value, className="card-text text-white fw-bolder mb-0"),
+                                html.P(unit, className="text-white-50 mb-0 small"),
+                            ],
+                            className="text-end"
+                        ),
+                    ],
+                    className="d-flex justify-content-between align-items-center"
+                )
+            ]
+        ),
+        className=f"shadow-lg rounded-4 border-start border-5",
+        style={
+            'background': f'linear-gradient(90deg, {card_color} 0%, {card_color}b0 100%)',
+            'border-left-color': card_color,
+            'border-left-width': '5px'
+        }
+    )
+
+
+# --- Main Function: จัดกลุ่ม KPI Cards ---
+def render_kpi_cards(df: pd.DataFrame):
+    
+    # 1. จำนวนสมาชิกทั้งหมด
+    total_members = len(df)
+    
+    # 2. ช่วงอายุที่มีสมาชิกมากที่สุด (KPI ที่ถูกแก้ไขตามความต้องการ)
+    if 'ช่วงอายุ' in df.columns and not df['ช่วงอายุ'].isnull().all():
+        # Logic การคำนวณฐานนิยม 
+        most_common_age_group = df['ช่วงอายุ'].mode().iloc[0]
+        age_value = str(most_common_age_group).split(' ')[0] 
+        age_unit = "ฐานนิยม" 
+    else:
+        age_value = 'N/A'
+        age_unit = 'ไม่พบข้อมูล'
         
-        card = dbc.Col(
-            dbc.Card(
-                [
-                    dbc.CardHeader([html.I(className=f"{icon} fa-2x text-white me-2"), html.Span(title, className="text-white fw-bold"),], 
-                                   className=f"bg-{color} text-center py-2 border-0 rounded-top-4"),
-                    dbc.CardBody([html.Div([html.H1(value, 
-                                                    className=f"card-title text-center text-{color} fw-bolder mb-0"), html.P(trailing_text, 
-                                                                                                                             className="card-text text-muted small text-center mt-1"),], 
-                                           className="mt-3",)], className="bg-white rounded-bottom-4"),
-                ],
-                className="shadow-3d mb-4 border-0 rounded-4 overflow-hidden",
-                style={'--bs-card-shadow': '0 10px 30px rgba(0, 0, 0, 0.1)', 'border-top': f'5px solid var(--bs-{color})'}
-            ),
-            md=3
-        )
-        cards.append(card)
+    # 3. จำนวนสาขาที่ไม่ซ้ำกัน
+    if 'รหัสสาขา' in df.columns and not df['รหัสสาขา'].isnull().all():
+        num_branches = df['รหัสสาขา'].nunique()
+        branch_unit = "แห่ง"
+    else:
+        num_branches = 'N/A'
+        branch_unit = 'ไม่พบข้อมูล'
         
-    return dbc.Row(cards, className="g-4")
+    # 4. รายได้เฉลี่ย
+    if 'รายได้_Clean' in df.columns and not df['รายได้_Clean'].isnull().all():
+        avg_income = df['รายได้_Clean'].mean()
+        income_value = "{:,.0f}".format(avg_income) 
+        income_unit = "บาท/เดือน (เฉลี่ย)"
+    else:
+        income_value = 'N/A'
+        income_unit = 'ไม่พบข้อมูล'
+
+    # สร้าง Cards 
+    card_members = render_kpi_card("สมาชิก", 
+                                   f"{total_members}", 
+                                   "ราย", 
+                                   'fa-users', 
+                                   'primary')
+                                   
+    card_age = render_kpi_card("ช่วงอายุ", 
+                               f"{age_value}", 
+                               age_unit, 
+                               'fa-birthday-cake', 
+                               'purple')
+                               
+    card_branches = render_kpi_card("สาขา", 
+                                    f"{num_branches}", 
+                                    branch_unit, 
+                                    'fa-building', 
+                                    'success')
+                                    
+    card_income = render_kpi_card("รายได้", 
+                                  f"{income_value}", 
+                                  income_unit, 
+                                  'fa-dollar-sign', 
+                                  'orange')
+    
+    # จัด Layout ใน Row
+    return dbc.Row(
+        [
+            dbc.Col(card_members, lg=3, md=6, className="mb-4"),
+            dbc.Col(card_age, lg=3, md=6, className="mb-4"),
+            dbc.Col(card_branches, lg=3, md=6, className="mb-4"),
+            dbc.Col(card_income, lg=3, md=6, className="mb-4"),
+        ],
+        className="g-4"
+    )
