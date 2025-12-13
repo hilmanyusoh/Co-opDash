@@ -47,13 +47,14 @@ def render_kpi_cards(df: pd.DataFrame):
     
     # 1. จำนวนสมาชิกทั้งหมด
     total_members = len(df)
+
     
     # 2. ช่วงอายุที่มีสมาชิกมากที่สุด (KPI ที่ถูกแก้ไขตามความต้องการ)
     if 'ช่วงอายุ' in df.columns and not df['ช่วงอายุ'].isnull().all():
         # Logic การคำนวณฐานนิยม 
         most_common_age_group = df['ช่วงอายุ'].mode().iloc[0]
         age_value = str(most_common_age_group).split(' ')[0] 
-        age_unit = "ฐานนิยม" 
+        age_unit = "" 
     else:
         age_value = 'N/A'
         age_unit = 'ไม่พบข้อมูล'
@@ -61,7 +62,7 @@ def render_kpi_cards(df: pd.DataFrame):
     # 3. จำนวนสาขาที่ไม่ซ้ำกัน
     if 'รหัสสาขา' in df.columns and not df['รหัสสาขา'].isnull().all():
         num_branches = df['รหัสสาขา'].nunique()
-        branch_unit = "แห่ง"
+        branch_unit = ""
     else:
         num_branches = 'N/A'
         branch_unit = 'ไม่พบข้อมูล'
@@ -70,7 +71,7 @@ def render_kpi_cards(df: pd.DataFrame):
     if 'รายได้_Clean' in df.columns and not df['รายได้_Clean'].isnull().all():
         avg_income = df['รายได้_Clean'].mean()
         income_value = "{:,.0f}".format(avg_income) 
-        income_unit = "บาท/เดือน (เฉลี่ย)"
+        income_unit = ""
     else:
         income_value = 'N/A'
         income_unit = 'ไม่พบข้อมูล'
@@ -78,7 +79,7 @@ def render_kpi_cards(df: pd.DataFrame):
     # สร้าง Cards 
     card_members = render_kpi_card("สมาชิก", 
                                    f"{total_members}", 
-                                   "ราย", 
+                                   "", 
                                    'fa-users', 
                                    'primary')
                                    

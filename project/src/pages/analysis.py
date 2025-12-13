@@ -98,7 +98,6 @@ def create_approval_time_chart(df):
 
 # --- 1. Layout ของหน้า Analysis ---
 def create_analysis_layout():
-    """สร้าง Layout สำหรับหน้า Dashboard Analysis"""
     df = load_data() 
     
     if df.empty:
