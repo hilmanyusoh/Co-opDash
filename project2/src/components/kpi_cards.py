@@ -17,7 +17,7 @@ COLOR_MAP = {
 }
 
 # =========================
-# Single KPI Card
+# Single KPI Card (เหมือนเดิม)
 # =========================
 def render_kpi_card(
     title: str,
@@ -65,7 +65,7 @@ def render_kpi_card(
 
 
 # =========================
-# KPI Cards Group
+# KPI Cards Group (ส่วนที่แก้ไข Logic)
 # =========================
 def render_kpi_cards(df: pd.DataFrame) -> dbc.Row:
     """สร้างกลุ่ม KPI Cards"""
@@ -93,18 +93,31 @@ def render_kpi_cards(df: pd.DataFrame) -> dbc.Row:
         except:
             pass
     
-    # 3. จำนวนสาขา
-    num_branches = "N/A"
-    if "branch_code" in df.columns and not df["branch_code"].isnull().all():
-        num_branches = df["branch_code"].nunique()
+    # 3. สาขาที่สมาชิกใช้บริการมากที่สุด
+    branch_value = "N/A"
+    if "Branch_code" in df.columns and not df["Branch_code"].isnull().all():
+        try:
+            mode_series = df["Branch_code"].mode()
+            if len(mode_series) > 0:
+                branch_value = str(mode_series.iloc[0]) 
+        except:
+            pass
     
-    # 4. รายได้เฉลี่ย
+    # 4. รายได้ที่สมาชิกมีมากที่สุด (Mode Income)
     income_value = "N/A"
+    # [แก้ไข Logic]: เปลี่ยนจากการหา Mean เป็นการหา Mode ของรายได้ที่ไม่เป็นศูนย์
     if "Income_Clean" in df.columns and not df["Income_Clean"].isnull().all():
         try:
-            avg_income = df["Income_Clean"].mean()
-            if pd.notna(avg_income):
-                income_value = f"{avg_income:,.0f}"
+            # กรองเฉพาะรายได้ที่มากกว่า 0 ก่อนหา Mode
+            non_zero_income = df[df["Income_Clean"] > 0]["Income_Clean"]
+            
+            if not non_zero_income.empty:
+                # ใช้ .mode() เพื่อหารายได้ที่พบบ่อยที่สุด
+                mode_income = non_zero_income.mode()
+                
+                if len(mode_income) > 0:
+                    # แสดง Mode ตัวแรก และจัดรูปแบบให้มีจุลภาค
+                    income_value = f"{mode_income.iloc[0]:,.0f}" 
         except:
             pass
     
@@ -131,9 +144,9 @@ def render_kpi_cards(df: pd.DataFrame) -> dbc.Row:
         ),
         dbc.Col(
             render_kpi_card(
-                title="จำนวนสาขา",
-                value=num_branches if isinstance(num_branches, str) else f"{num_branches:,}",
-                unit="สาขา",
+                title="สาขาที่ใช้บริการมากที่สุด",
+                value=branch_value,
+                unit="รหัสสาขา",
                 icon_class="fa-building",
                 color_class="success",
             ),
@@ -141,7 +154,8 @@ def render_kpi_cards(df: pd.DataFrame) -> dbc.Row:
         ),
         dbc.Col(
             render_kpi_card(
-                title="รายได้เฉลี่ย",
+                # [แก้ไข Title]: เปลี่ยนชื่อหัวข้อ
+                title="รายได้ที่พบบ่อยที่สุด",
                 value=income_value,
                 unit="บาท",
                 icon_class="fa-dollar-sign",
