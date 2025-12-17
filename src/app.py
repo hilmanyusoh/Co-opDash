@@ -58,7 +58,7 @@ app.layout = html.Div(
 @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
 def render_page_content(pathname):
 
-    if pathname == "/dashboard":
+    if pathname == "/" or pathname == "/dashboard":
         return dashboard.layout
 
     # กรณีไม่พบหน้า (404)
