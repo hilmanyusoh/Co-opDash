@@ -1,12 +1,9 @@
 # src/data_manager.py
 
 import pandas as pd
-import numpy as np
 import os
-from datetime import datetime
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
-from typing import Optional, Tuple
 
 from .utils import calculate_age_from_dob
 
@@ -14,12 +11,13 @@ from .utils import calculate_age_from_dob
 # PostgreSQL Configuration
 # =========================
 PG_CONFIG = {
-    "user": os.getenv("POSTGRES_USER", "myuser"),
-    "password": os.getenv("POSTGRES_PASSWORD", "mypassword"),
+    "user": os.getenv("POSTGRES_USER", "postgres"),
+    "password": os.getenv("POSTGRES_PASSWORD", "019604"),
     "host": os.getenv("POSTGRES_HOST", "localhost"),
     "port": int(os.getenv("POSTGRES_PORT", 5432)),
-    "database": os.getenv("POSTGRES_DB", "mydatabase"),
+    "database": os.getenv("POSTGRES_DB", "icorpdash"),
 }
+
 
 # =========================
 # Create Engine
@@ -68,8 +66,7 @@ def load_data() -> pd.DataFrame:
     # ทำความสะอาดข้อมูลรายได้
     if "income" in df.columns:
         df["Income_Clean"] = pd.to_numeric(
-            df["income"].astype(str).str.replace(",", "", regex=False),
-            errors='coerce'
+            df["income"].astype(str).str.replace(",", "", regex=False), errors="coerce"
         )
 
     # คำนวณอายุและช่วงอายุ
@@ -79,7 +76,7 @@ def load_data() -> pd.DataFrame:
             df["Age"],
             bins=[0, 20, 30, 40, 50, 60, 120],
             labels=["<20", "20-29", "30-39", "40-49", "50-59", "60+"],
-            include_lowest=True
+            include_lowest=True,
         )
 
     return df
@@ -92,7 +89,7 @@ def prepare_df_for_export(df: pd.DataFrame) -> pd.DataFrame:
     """เตรียม DataFrame สำหรับ export โดยจัดรูปแบบคอลัมน์"""
     if df.empty:
         return df
-    
+
     df = df.copy()
 
     # จัดรูปแบบรายได้
@@ -116,7 +113,7 @@ def test_connection() -> bool:
     engine = get_pg_engine()
     if engine is None:
         return False
-    
+
     try:
         with engine.connect() as conn:
             result = conn.execute(text("SELECT COUNT(*) FROM members"))
