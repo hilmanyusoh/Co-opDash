@@ -1,193 +1,421 @@
-# src/pages/review.py
+# src/pages/home.py
 
-from dash import dcc, html, dash_table
+from dash import html
 import dash_bootstrap_components as dbc
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import pandas as pd
 import datetime
-import numpy as np 
+import re
+
+from sqlalchemy import text
+
+from ..data_manager import get_pg_engine, calculate_age_from_dob
+
+# ==================================================
+# Layout
+# ==================================================
+
+def create_home_layout():
+    member_count = 0
+    db_status = False
+
+    try:
+        engine = get_pg_engine()
+        if engine is not None:
+            member_count = pd.read_sql(
+                "SELECT COUNT(*) FROM members",
+                engine
+            ).iloc[0, 0]
+            db_status = True
+            engine.dispose()
+    except Exception:
+        db_status = False
+
+    return html.Div(
+        style={"backgroundColor": "#f8fafc", "minHeight": "100vh"},
+        children=[
+            dbc.Container(
+                fluid=True,
+                className="py-4 px-4",
+                children=[
+                    # Header Section
+                    html.Div(
+                        className="mb-4",
+                        children=[
+                            html.H2(
+                                "✏️ บันทึกข้อมูลสมาชิกใหม่",
+                                style={"color": "#1e293b", "fontWeight": "600"},
+                                className="mb-2"
+                            ),
+                            html.P(
+                                "กรอกข้อมูลสมาชิกเพื่อเพิ่มเข้าสู่ระบบ",
+                                className="text-muted mb-0",
+                                style={"fontSize": "0.95rem"}
+                            ),
+                        ]
+                    ),
+
+                    # Status Badge
+                    dbc.Card(
+                        dbc.CardBody(
+                            dbc.Row(
+                                [
+                                    dbc.Col(
+                                        html.Div(
+                                            [
+                                                html.I(
+                                                    className=f"bi bi-{'check-circle-fill' if db_status else 'x-circle-fill'} me-2",
+                                                    style={"fontSize": "1.2rem", "color": "#10b981" if db_status else "#ef4444"}
+                                                ),
+                                                html.Span(
+                                                    "เชื่อมต่อฐานข้อมูลสำเร็จ" if db_status else "ไม่สามารถเชื่อมต่อฐานข้อมูล",
+                                                    style={"fontWeight": "500", "color": "#1e293b"}
+                                                )
+                                            ],
+                                            className="d-flex align-items-center"
+                                        ),
+                                        md=6,
+                                        className="mb-2 mb-md-0"
+                                    ),
+                                    dbc.Col(
+                                        html.Div(
+                                            [
+                                                html.I(className="bi bi-people-fill me-2", style={"color": "#6366f1"}),
+                                                html.Span("จำนวนสมาชิก: ", className="text-muted"),
+                                                html.Strong(f"{member_count:,}", style={"color": "#1e293b"}),
+                                                html.Span(" รายการ", className="text-muted")
+                                            ],
+                                            className="d-flex align-items-center"
+                                        ),
+                                        md=6
+                                    )
+                                ]
+                            )
+                        ),
+                        className="shadow-sm border-0 mb-4",
+                        style={"borderLeft": f"4px solid {'#10b981' if db_status else '#ef4444'}"}
+                    ),
+
+                    # Form Section
+                    dbc.Row(
+                        [
+                            dbc.Col(
+                                dbc.Card(
+                                    dbc.CardBody(
+                                        [
+                                            html.H5(
+                                                "📝 ข้อมูลส่วนตัว",
+                                                className="mb-4",
+                                                style={"color": "#475569", "fontWeight": "600"}
+                                            ),
+                                            
+                                            # รหัสสมาชิก
+                                            dbc.Label("รหัสสมาชิก", className="fw-semibold mb-1", style={"color": "#64748b", "fontSize": "0.9rem"}),
+                                            dbc.Input(
+                                                id="member-id",
+                                                placeholder="กรอกรหัสสมาชิก",
+                                                className="mb-3",
+                                                style={"borderColor": "#e2e8f0"}
+                                            ),
+
+                                            # คำนำหน้า
+                                            dbc.Label("คำนำหน้า", className="fw-semibold mb-1", style={"color": "#64748b", "fontSize": "0.9rem"}),
+                                            dbc.Select(
+                                                id="member-prefix",
+                                                options=[
+                                                    {"label": "นาย", "value": "นาย"},
+                                                    {"label": "นาง", "value": "นาง"},
+                                                    {"label": "นางสาว", "value": "นางสาว"},
+                                                ],
+                                                value="นาย",
+                                                className="mb-3",
+                                                style={"borderColor": "#e2e8f0"}
+                                            ),
+
+                                            # ชื่อ
+                                            dbc.Label("ชื่อ", className="fw-semibold mb-1", style={"color": "#64748b", "fontSize": "0.9rem"}),
+                                            dbc.Input(
+                                                id="member-name",
+                                                placeholder="กรอกชื่อ",
+                                                className="mb-3",
+                                                style={"borderColor": "#e2e8f0"}
+                                            ),
+
+                                            # นามสกุล
+                                            dbc.Label("นามสกุล", className="fw-semibold mb-1", style={"color": "#64748b", "fontSize": "0.9rem"}),
+                                            dbc.Input(
+                                                id="member-surname",
+                                                placeholder="กรอกนามสกุล",
+                                                className="mb-3",
+                                                style={"borderColor": "#e2e8f0"}
+                                            ),
+
+                                            # วันเกิด
+                                            dbc.Label("วันเกิด", className="fw-semibold mb-1", style={"color": "#64748b", "fontSize": "0.9rem"}),
+                                            dbc.Input(
+                                                id="member-dob",
+                                                placeholder="วว/ดด/ปปปป (เช่น 15/08/2543)",
+                                                className="mb-2",
+                                                style={"borderColor": "#e2e8f0"}
+                                            ),
+                                            html.Div(
+                                                id="member-age-display",
+                                                className="mb-3",
+                                                style={"color": "#6366f1", "fontSize": "0.9rem", "fontWeight": "500"}
+                                            ),
+                                        ]
+                                    ),
+                                    className="shadow-sm border-0 h-100"
+                                ),
+                                lg=6,
+                                className="mb-4"
+                            ),
+
+                            dbc.Col(
+                                dbc.Card(
+                                    dbc.CardBody(
+                                        [
+                                            html.H5(
+                                                "💼 ข้อมูลการทำงาน",
+                                                className="mb-4",
+                                                style={"color": "#475569", "fontWeight": "600"}
+                                            ),
+
+                                            # รายได้
+                                            dbc.Label("รายได้ (บาท)", className="fw-semibold mb-1", style={"color": "#64748b", "fontSize": "0.9rem"}),
+                                            dbc.Input(
+                                                id="member-income",
+                                                placeholder="กรอกรายได้",
+                                                className="mb-3",
+                                                style={"borderColor": "#e2e8f0"}
+                                            ),
+
+                                            # อาชีพ
+                                            dbc.Label("อาชีพ", className="fw-semibold mb-1", style={"color": "#64748b", "fontSize": "0.9rem"}),
+                                            dbc.Input(
+                                                id="member-occupation",
+                                                placeholder="กรอกอาชีพ (ถ้ามี)",
+                                                className="mb-3",
+                                                style={"borderColor": "#e2e8f0"}
+                                            ),
+
+                                            # รหัสสาขา
+                                            dbc.Label("รหัสสาขา", className="fw-semibold mb-1", style={"color": "#64748b", "fontSize": "0.9rem"}),
+                                            dbc.Input(
+                                                id="member-branch",
+                                                placeholder="กรอกรหัสสาขา (ถ้ามี)",
+                                                className="mb-3",
+                                                style={"borderColor": "#e2e8f0"}
+                                            ),
+
+                                            # วันที่สมัคร
+                                            dbc.Label("วันที่สมัคร", className="fw-semibold mb-1", style={"color": "#64748b", "fontSize": "0.9rem"}),
+                                            dbc.Input(
+                                                id="member-regdate",
+                                                placeholder="วว/ดด/ปปปป (ถ้ามี)",
+                                                className="mb-3",
+                                                style={"borderColor": "#e2e8f0"}
+                                            ),
+
+                                            # วันที่อนุมัติ
+                                            dbc.Label("วันที่อนุมัติ", className="fw-semibold mb-1", style={"color": "#64748b", "fontSize": "0.9rem"}),
+                                            dbc.Input(
+                                                id="member-apprdate",
+                                                placeholder="วว/ดด/ปปปป (ถ้ามี)",
+                                                className="mb-3",
+                                                style={"borderColor": "#e2e8f0"}
+                                            ),
+                                        ]
+                                    ),
+                                    className="shadow-sm border-0 h-100"
+                                ),
+                                lg=6,
+                                className="mb-4"
+                            ),
+                        ]
+                    ),
+
+                    # Submit Button & Message
+                    dbc.Row(
+                        dbc.Col(
+                            [
+                                dbc.Button(
+                                    [
+                                        html.I(className="bi bi-check-circle me-2"),
+                                        "บันทึกข้อมูล"
+                                    ],
+                                    id="submit-button",
+                                    size="lg",
+                                    className="w-100 shadow-sm",
+                                    style={
+                                        "background": "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                                        "border": "none",
+                                        "fontWeight": "600",
+                                        "padding": "12px"
+                                    }
+                                ),
+                                html.Div(id="output-message", className="mt-3"),
+                            ]
+                        )
+                    ),
+
+                    # Required Fields Note
+                    html.Div(
+                        [
+                            html.Small(
+                                "📌 ต้องกรอก: รหัสสมาชิก, ชื่อ, นามสกุล, วันเกิด, รายได้",
+                                className="text-muted",
+                                style={"fontSize": "0.85rem"}
+                            )
+                        ],
+                        className="mt-3 text-center"
+                    )
+                ]
+            )
+        ]
+    )
 
 
-from ..data_manager import (
-    get_pg_engine, 
-    load_data, 
-    prepare_df_for_export, 
-    calculate_age_from_dob, 
-)
+layout = create_home_layout()
 
-PRIMARY_COLOR = '#007bff'
+# ==================================================
+# Callbacks
+# ==================================================
 
-# ... (ส่วน Layout create_review_layout() ไม่มีการเปลี่ยนแปลง) ...
-
-layout = create_review_layout()
-
-
-# --- 2. Callbacks ของหน้า Review ---
 def register_callbacks(app):
 
-    # Callback A: ค้นหาข้อมูลสมาชิก (Search)
+    # -------------------------------
+    # แสดงอายุแบบ real-time
+    # -------------------------------
     @app.callback(
-        Output('search-output-table', 'children'),
-        [Input('member-id-search', 'value')]
+        Output("member-age-display", "children"),
+        Input("member-dob", "value"),
     )
-    def search_member_data(member_id):
-        if not member_id or not str(member_id).strip(): 
-            return html.Div()
-        
+    def update_age(dob):
+        if not dob:
+            return "💡 กรอกวันเกิดเพื่อคำนวณอายุ"
+        age = calculate_age_from_dob(dob)
+        if pd.notna(age):
+            return f"🎂 อายุ: {int(age)} ปี"
+        return "⚠️ รูปแบบวันที่ไม่ถูกต้อง (ใช้ วว/ดด/ปปปป)"
+
+    # -------------------------------
+    # บันทึกข้อมูลสมาชิก
+    # -------------------------------
+    @app.callback(
+        Output("output-message", "children"),
+        Input("submit-button", "n_clicks"),
+        State("member-id", "value"),
+        State("member-prefix", "value"),
+        State("member-name", "value"),
+        State("member-surname", "value"),
+        State("member-dob", "value"),
+        State("member-income", "value"),
+        State("member-occupation", "value"),
+        State("member-branch", "value"),
+        State("member-regdate", "value"),
+        State("member-apprdate", "value"),
+        prevent_initial_call=True,
+    )
+    def save_member(
+        n_clicks, member_id, prefix, name, surname,
+        dob, income, career, branch, reg_date, appr_date
+    ):
         try:
-            engine = get_pg_engine() 
-            search_id = str(member_id).strip()
+            # -------------------------------
+            # Validate required fields
+            # -------------------------------
+            if not all([member_id, name, surname, dob, income]):
+                return dbc.Alert(
+                    [
+                        html.I(className="bi bi-exclamation-triangle-fill me-2"),
+                        "กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน (รหัสสมาชิก, ชื่อ, นามสกุล, วันเกิด, รายได้)"
+                    ],
+                    color="warning",
+                    className="d-flex align-items-center"
+                )
+
+            engine = get_pg_engine()
+            if engine is None:
+                return dbc.Alert(
+                    [
+                        html.I(className="bi bi-x-circle-fill me-2"),
+                        "ไม่สามารถเชื่อมต่อฐานข้อมูลได้"
+                    ],
+                    color="danger",
+                    className="d-flex align-items-center"
+                )
+
+            # -------------------------------
+            # Clean & convert data
+            # -------------------------------
+            income_val = float(re.sub(r"[^0-9.]", "", income))
+
+            dob_dt = datetime.datetime.strptime(dob, "%d/%m/%Y").date()
+            reg_dt = datetime.datetime.strptime(reg_date, "%d/%m/%Y").date() if reg_date else None
+            appr_dt = datetime.datetime.strptime(appr_date, "%d/%m/%Y").date() if appr_date else None
+
+            approval_days = (appr_dt - reg_dt).days if reg_dt and appr_dt else None
+
+            # -------------------------------
+            # SQL Insert
+            # -------------------------------
             
-            # --- PostgreSQL Query ---
-            query = """
-            SELECT 
+            sql = text("""
+                INSERT INTO members (
                 member_id, prefix, name, surname, birthday,
                 income, career, branch_code,
-                registration_date, 
-                approval_date, -- <<<< คอลัมน์ "วันที่อนุมัติ"
-                (approval_date - registration_date) AS approval_days_calculated -- <<<< คอลัมน์ "ระยะเวลาอนุมัติ"
-            FROM members 
-            WHERE member_id = %s
-            """
-            
-            df = pd.read_sql(query, engine, params=[search_id]) 
+                registration_date, approval_date
+            ) VALUES (
+                :member_id, :prefix, :name, :surname, :birthday,
+                :income, :career, :branch_code,
+                :registration_date, :approval_date
+            )
+        """)
 
-            if df.empty:
-                return dbc.Alert(f"⚠️ ไม่พบข้อมูลสมาชิกที่มีรหัส: {search_id}", 
-                                 color="warning")
-
-            row = df.iloc[0].to_dict() 
-            
-            # --- Robust Data Cleaning and Calculation ---
-            
-            # Age Calculation (ใช้ 'birthday' แทน 'dob')
-            dob_key = 'birthday' if 'birthday' in row else 'dob'
-            age = calculate_age_from_dob(row.get(dob_key))
-            row["อายุ (คำนวณ)"] = f"{age} ปี" if pd.notna(age) else "N/A"
-            
-            # Income Formatting
-            income_value = row.get('income')
-            formatted_income = "N/A"
-            if pd.notna(income_value) and income_value is not None:
-                try:
-                    formatted_income = f"{float(income_value):,.0f}" 
-                except (ValueError, TypeError):
-                    formatted_income = str(income_value) 
-            row["income"] = formatted_income
-                
-            
-            # *** การจัดการคอลัมน์ approval_days_calculated (Timedelta) ***
-            # Timedelta จาก DB จะอยู่ในรูป Timedelta object ต้องแปลงเป็นจำนวนวัน
-            appr_days_raw = row.get('approval_days_calculated')
-            if pd.notna(appr_days_raw) and appr_days_raw is not None:
-                try:
-                    # แปลง Timedelta เป็นจำนวนวัน (เช่น 7 days -> 7)
-                    appr_days = appr_days_raw.days 
-                    row["approval_days_calculated"] = f"{appr_days} วัน"
-                except AttributeError:
-                    # ถ้าไม่ใช่ Timedelta (อาจเป็น int หรือ float)
-                    row["approval_days_calculated"] = f"{appr_days_raw} วัน"
-                except Exception:
-                     row["approval_days_calculated"] = "N/A"
-            else:
-                row["approval_days_calculated"] = "N/A"
-            
-            
-            # [*** การปรับปรุงที่เด็ดขาด: แปลงค่าทั้งหมดให้เป็น String/Native Python Type ***]
-            cleaned_row = {}
-            for k, v in row.items():
-                if pd.isna(v) or v is None or (isinstance(v, str) and v.strip() == ''):
-                    cleaned_row[k] = "N/A"
-                elif isinstance(v, pd.Timestamp):
-                    cleaned_row[k] = str(v.date())
-                elif isinstance(v, np.generic):
-                    try:
-                        cleaned_row[k] = str(v.item()) 
-                    except (ValueError, AttributeError, TypeError):
-                        cleaned_row[k] = str(v)
-                else:
-                    cleaned_row[k] = str(v)
-            
-            # --- Mapping and Result Generation ---
-            
-            display_map = {
-                "member_id": "รหัสสมาชิก",
-                "prefix": "คำนำหน้า",
-                "name": "ชื่อ", 
-                "surname": "สกุล",                 
-                "birthday": "ว/ด/ป เกิด", 
-                "income": "รายได้ (บาท)",
-                "career": "อาชีพ",
-                "branch_code": "รหัสสาขา",                
-                "registration_date": "วันที่สมัครสมาชิก", 
-                "approval_date": "วันที่อนุมัติ",             # <<<< แสดงผล
-                "approval_days_calculated": "ระยะเวลาอนุมัติ (วัน)", # <<<< แสดงผล
-                "อายุ (คำนวณ)": "อายุ (คำนวณ)",
+            params = {
+                "member_id": int(member_id),
+                "prefix": prefix,
+                "name": name,
+                "surname": surname,
+                "birthday": dob_dt,
+                "income": income_val,
+                "career": career,
+                "branch_code": branch,
+                "registration_date": reg_dt,
+                "approval_date": appr_dt,
             }
-            
-            # สร้าง List of Dictionaries สำหรับ DataTable
-            result_list = []
-            for db_key, display_name in display_map.items():
-                if db_key in cleaned_row:
-                    result_list.append({"คุณสมบัติ": display_name, "ค่า": cleaned_row[db_key]})
-                
-            
-            # --- Output Table with Card Wrapper ---
-            data_table = dash_table.DataTable(
-                id='search-result-table', 
-                columns=[
-                    {"name": "คุณสมบัติ", "id": "คุณสมบัติ"}, 
-                    {"name": "ค่า", "id": "ค่า", "type": "text"}
-                ], 
-                data=result_list, 
-                style_header={
-                    'backgroundColor': PRIMARY_COLOR, 
-                    'color': 'white', 
-                    'fontWeight': 'bold'
-                }, 
-                style_cell={'textAlign': 'left'}
-            )
-            
-            return dbc.Card(
-                dbc.CardBody([
-                    html.H5(f" ✅ พบข้อมูลสมาชิก: {search_id}", 
-                            className="text-success mb-3"), 
-                    data_table
-                ]), 
-                className="shadow-lg border-success border-start border-4"
+
+
+            with engine.begin() as conn:
+                conn.execute(sql, params)
+
+            engine.dispose()
+
+            return dbc.Alert(
+                [
+                    html.I(className="bi bi-check-circle-fill me-2"),
+                    f"บันทึกข้อมูลสมาชิก {name} {surname} สำเร็จแล้ว"
+                ],
+                color="success",
+                duration=4000,
+                className="d-flex align-items-center shadow-sm"
             )
 
-        except Exception as e: 
-            return dbc.Alert(f"❌ เกิดข้อผิดพลาดในการค้นหา: {e}", color="danger")
+        except Exception as e:
+            msg = str(e)
+            if "duplicate key" in msg.lower():
+                msg = f"รหัสสมาชิก {member_id} มีอยู่ในระบบแล้ว"
+            elif "invalid input" in msg.lower():
+                msg = "รูปแบบข้อมูลไม่ถูกต้อง (ตรวจสอบวันที่และตัวเลข)"
+            else:
+                msg = "เกิดข้อผิดพลาดในการบันทึกข้อมูล"
 
-
-    # Callback B: ตารางข้อมูลทั้งหมด (ใช้ load_data ที่สะอาดแล้ว)
-    @app.callback(
-        Output('full-data-table', 'children'),
-        [Input('url', 'pathname')]
-    )
-    def display_full_data_table(pathname):
-        if pathname != "/review": 
-            return None
-        df = load_data() 
-        if df.empty: 
-            return dbc.Alert("ไม่พบข้อมูล (DataFrame ว่างเปล่า)", 
-                             color="secondary")
-        
-        # คอลัมน์ approval_date และ approval_days ควรมีอยู่ใน df ที่เตรียมไว้แล้ว
-        df_display = prepare_df_for_export(df)
-        
-        data_table = dash_table.DataTable(id='table-review-full', 
-                                          columns=[{"name": i, "id": i} for i in df_display.columns], 
-                                          data=df_display.to_dict('records'), 
-                                          sort_action="native", 
-                                          filter_action="native", 
-                                          page_action="native", 
-                                          page_current=0, 
-                                          page_size=15, 
-                                          style_header={'backgroundColor': PRIMARY_COLOR, 'color': 'white', 'fontWeight': 'bold'}, 
-                                          style_cell={'textAlign': 'left', 'fontFamily': 'sans-serif'}, 
-                                          export_format='xlsx', 
-                                          style_table={'overflowX': 'auto', 'minWidth': '100%'}, 
-                                          )
-        return data_table
+            return dbc.Alert(
+                [
+                    html.I(className="bi bi-x-circle-fill me-2"),
+                    msg
+                ],
+                color="danger",
+                className="d-flex align-items-center"
+            )
