@@ -1,10 +1,14 @@
+import os
 from dash import Dash, dcc, html
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output
+from dotenv import load_dotenv
 
 # Imports Layout และ Register Functions จากแต่ละ Page
 from .components.sidebar import render_sidebar
 from .pages import dashboard
+
+load_dotenv()  # ⭐ โหลด .env
 
 # สร้าง Dash Instance
 app = Dash(
@@ -72,7 +76,8 @@ def render_page_content(pathname):
 dashboard.register_callbacks(app)
 
 if __name__ == "__main__":
-    app.run(debug=True)
-
-# สำหรับ deployment
-# server = app.server
+    app.run(
+        debug=os.getenv("DEBUG") == "True",
+        host=os.getenv("HOST", "127.0.0.1"),
+        port=int(os.getenv("PORT", 8050)),
+    )
