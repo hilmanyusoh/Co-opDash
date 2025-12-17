@@ -1,0 +1,10 @@
+/* ===== Global ===== */
+body {
+    margin: 0;
+    background-color: #f1f5f9; /* background หลัก */
+    font-family: "Noto Sans Thai", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: weight;
+    font-style: normal;
+    font-variation-settings: "wdth" 100;
+}

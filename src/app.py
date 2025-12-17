@@ -4,7 +4,7 @@ from dash.dependencies import Input, Output
 
 # Imports Layout และ Register Functions จากแต่ละ Page
 from .components.sidebar import render_sidebar
-from .pages import home, analysis, review
+from .pages import dashboard
 
 # สร้าง Dash Instance
 app = Dash(
@@ -12,12 +12,15 @@ app = Dash(
     external_stylesheets=[
         dbc.themes.COSMO,  # ธีมสีสวย เรียบง่าย
         "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+        "https://fonts.googleapis.com",
+        "https://fonts.gstatic.com",
+        "https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@100..900&display=swap",
     ],
     suppress_callback_exceptions=True,
     meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
 )
 
-app.title = "Dashboard Members"
+app.title = "I-Corp Dash"
 
 
 # Layout Styles
@@ -34,7 +37,7 @@ SIDEBAR_STYLE = {
 
 CONTENT_STYLE = {
     "margin-left": "18rem",
-    "padding": "2rem 2rem",
+    "padding": "1.5rem",
 }
 
 # การจัด Layout หลักของแอปพลิเคชัน
@@ -51,14 +54,8 @@ app.layout = html.Div(
 @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
 def render_page_content(pathname):
 
-    if pathname == "/" or pathname == "/home":
-        return home.layout
-
-    elif pathname == "/analysis":
-        return analysis.layout
-
-    elif pathname == "/review":
-        return review.layout
+    if pathname == "/dashboard":
+        return dashboard.layout
 
     # กรณีไม่พบหน้า (404)
     return dbc.Jumbotron(
@@ -72,9 +69,7 @@ def render_page_content(pathname):
 
 
 # Callbacks ของแต่ละ Page
-home.register_callbacks(app)
-analysis.register_callbacks(app)
-review.register_callbacks(app)
+dashboard.register_callbacks(app)
 
 if __name__ == "__main__":
     app.run(debug=True)
