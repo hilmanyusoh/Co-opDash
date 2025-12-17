@@ -13,12 +13,11 @@ from ..data_manager import (
     calculate_age_from_dob
 )
 
-# ==================================================
-# Layout
-# ==================================================
+
+# Layout สำหรับหน้า Data Review
+
 
 def create_review_layout():
-    """สร้าง Layout สำหรับหน้า Data Review"""
     return html.Div(
         style={"backgroundColor": "#f8fafc", "minHeight": "100vh"},
         children=[
@@ -95,9 +94,8 @@ def create_review_layout():
 
 layout = create_review_layout()
 
-# ==================================================
+
 # Callbacks
-# ==================================================
 
 def register_callbacks(app):
 
@@ -110,7 +108,6 @@ def register_callbacks(app):
             return html.Div(
                 [
                     html.I(className="bi bi-info-circle me-2", style={"color": "#94a3b8"}),
-                    "กรอกรหัสสมาชิกเพื่อเริ่มค้นหา"
                 ],
                 className="text-muted d-flex align-items-center",
                 style={"fontSize": "0.9rem"}
@@ -155,13 +152,12 @@ def register_callbacks(app):
                 diff = (appr_date - reg_date).days
                 approval_period_text = f"{diff} วัน"
                 
-                # สีตามระยะเวลา
                 if diff <= 3:
-                    approval_badge_color = "#10b981"  # เขียว
+                    approval_badge_color = "#10b981"  
                 elif diff <= 7:
-                    approval_badge_color = "#f59e0b"  # ส้ม
+                    approval_badge_color = "#f59e0b"  
                 else:
-                    approval_badge_color = "#ef4444"  # แดง
+                    approval_badge_color = "#ef4444"  
 
             # คำนวณอายุ
             age = calculate_age_from_dob(row.get('birthday'))

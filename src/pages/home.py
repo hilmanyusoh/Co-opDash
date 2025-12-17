@@ -11,9 +11,8 @@ from sqlalchemy import text
 
 from ..data_manager import get_pg_engine, calculate_age_from_dob
 
-# ==================================================
+
 # Layout
-# ==================================================
 
 def create_home_layout():
     member_count = 0
@@ -43,7 +42,7 @@ def create_home_layout():
                         className="mb-4",
                         children=[
                             html.H2(
-                                "✏️ บันทึกข้อมูลสมาชิกใหม่",
+                                "บันทึกข้อมูลสมาชิกใหม่",
                                 style={"color": "#1e293b", "fontWeight": "600"},
                                 className="mb-2"
                             ),
@@ -104,7 +103,7 @@ def create_home_layout():
                                     dbc.CardBody(
                                         [
                                             html.H5(
-                                                "📝 ข้อมูลส่วนตัว",
+                                                "ข้อมูลส่วนตัว",
                                                 className="mb-4",
                                                 style={"color": "#475569", "fontWeight": "600"}
                                             ),
@@ -278,30 +277,24 @@ def create_home_layout():
 
 layout = create_home_layout()
 
-# ==================================================
-# Callbacks
-# ==================================================
 
+# Callbacks
 def register_callbacks(app):
 
-    # -------------------------------
-    # แสดงอายุแบบ real-time
-    # -------------------------------
     @app.callback(
         Output("member-age-display", "children"),
         Input("member-dob", "value"),
     )
     def update_age(dob):
         if not dob:
-            return "💡 กรอกวันเกิดเพื่อคำนวณอายุ"
+            return 
         age = calculate_age_from_dob(dob)
         if pd.notna(age):
             return f"🎂 อายุ: {int(age)} ปี"
-        return "⚠️ รูปแบบวันที่ไม่ถูกต้อง (ใช้ วว/ดด/ปปปป)"
+        return 
 
-    # -------------------------------
     # บันทึกข้อมูลสมาชิก
-    # -------------------------------
+
     @app.callback(
         Output("output-message", "children"),
         Input("submit-button", "n_clicks"),
@@ -322,14 +315,10 @@ def register_callbacks(app):
         dob, income, career, branch, reg_date, appr_date
     ):
         try:
-            # -------------------------------
-            # Validate required fields
-            # -------------------------------
             if not all([member_id, name, surname, dob, income]):
                 return dbc.Alert(
                     [
                         html.I(className="bi bi-exclamation-triangle-fill me-2"),
-                        "กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน (รหัสสมาชิก, ชื่อ, นามสกุล, วันเกิด, รายได้)"
                     ],
                     color="warning",
                     className="d-flex align-items-center"
@@ -340,15 +329,14 @@ def register_callbacks(app):
                 return dbc.Alert(
                     [
                         html.I(className="bi bi-x-circle-fill me-2"),
-                        "ไม่สามารถเชื่อมต่อฐานข้อมูลได้"
                     ],
                     color="danger",
                     className="d-flex align-items-center"
                 )
 
-            # -------------------------------
+
             # Clean & convert data
-            # -------------------------------
+            
             income_val = float(re.sub(r"[^0-9.]", "", income))
 
             dob_dt = datetime.datetime.strptime(dob, "%d/%m/%Y").date()
@@ -357,10 +345,7 @@ def register_callbacks(app):
 
             approval_days = (appr_dt - reg_dt).days if reg_dt and appr_dt else None
 
-            # -------------------------------
             # SQL Insert
-            # -------------------------------
-            
             sql = text("""
                 INSERT INTO members (
                 member_id, prefix, name, surname, birthday,

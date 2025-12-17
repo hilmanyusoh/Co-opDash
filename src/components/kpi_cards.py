@@ -5,9 +5,9 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 from typing import Any
 
-# =========================
+
 # สีของการ์ด
-# =========================
+
 COLOR_MAP = {
     "primary": "#007bff",
     "purple": "#6f42c1",
@@ -69,9 +69,9 @@ def render_kpi_card(
     )
 
 
-# =========================
 # KPI Cards Group (ส่วนที่แก้ไข Logic)
-# =========================
+
+
 def render_kpi_cards(df: pd.DataFrame) -> dbc.Row:
     """สร้างกลุ่ม KPI Cards"""
 
@@ -110,10 +110,8 @@ def render_kpi_cards(df: pd.DataFrame) -> dbc.Row:
 
     # 4. รายได้ที่สมาชิกมีมากที่สุด (Mode Income)
     income_value = "N/A"
-    # [แก้ไข Logic]: เปลี่ยนจากการหา Mean เป็นการหา Mode ของรายได้ที่ไม่เป็นศูนย์
     if "Income_Clean" in df.columns and not df["Income_Clean"].isnull().all():
         try:
-            # กรองเฉพาะรายได้ที่มากกว่า 0 ก่อนหา Mode
             non_zero_income = df[df["Income_Clean"] > 0]["Income_Clean"]
 
             if not non_zero_income.empty:
