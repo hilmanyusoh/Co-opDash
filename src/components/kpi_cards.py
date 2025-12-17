@@ -5,9 +5,9 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 from typing import Any
 
-# =========================
+
 # สีของการ์ด
-# =========================
+
 COLOR_MAP = {
     "primary": "#007bff",
     "purple": "#6f42c1",
@@ -16,9 +16,9 @@ COLOR_MAP = {
     "info": "#17a2b8",
 }
 
-# =========================
-# Single KPI Card (เหมือนเดิม)
-# =========================
+
+# Single KPI Card 
+
 def render_kpi_card(
     title: str,
     value: Any,
@@ -26,7 +26,6 @@ def render_kpi_card(
     icon_class: str = "fa-chart-line",
     color_class: str = "primary"
 ) -> dbc.Card:
-    """สร้าง KPI Card เดี่ยว"""
     
     card_color = COLOR_MAP.get(color_class, COLOR_MAP["primary"])
 
@@ -64,17 +63,14 @@ def render_kpi_card(
     )
 
 
-# =========================
+
 # KPI Cards Group (ส่วนที่แก้ไข Logic)
-# =========================
+
 def render_kpi_cards(df: pd.DataFrame) -> dbc.Row:
-    """สร้างกลุ่ม KPI Cards"""
-    
     if df.empty:
         return dbc.Alert(
             [
                 html.I(className="fas fa-exclamation-circle me-2"),
-                "ไม่พบข้อมูลสำหรับแสดง KPI"
             ],
             color="warning",
             className="mb-4 text-center",
@@ -103,12 +99,10 @@ def render_kpi_cards(df: pd.DataFrame) -> dbc.Row:
         except:
             pass
     
-    # 4. รายได้ที่สมาชิกมีมากที่สุด (Mode Income)
+    # 4. รายได้ที่สมาชิกมีมากที่สุด 
     income_value = "N/A"
-    # [แก้ไข Logic]: เปลี่ยนจากการหา Mean เป็นการหา Mode ของรายได้ที่ไม่เป็นศูนย์
     if "Income_Clean" in df.columns and not df["Income_Clean"].isnull().all():
         try:
-            # กรองเฉพาะรายได้ที่มากกว่า 0 ก่อนหา Mode
             non_zero_income = df[df["Income_Clean"] > 0]["Income_Clean"]
             
             if not non_zero_income.empty:
@@ -116,7 +110,7 @@ def render_kpi_cards(df: pd.DataFrame) -> dbc.Row:
                 mode_income = non_zero_income.mode()
                 
                 if len(mode_income) > 0:
-                    # แสดง Mode ตัวแรก และจัดรูปแบบให้มีจุลภาค
+                    # แสดงจัดรูปแบบให้มีจุลภาค
                     income_value = f"{mode_income.iloc[0]:,.0f}" 
         except:
             pass
@@ -154,7 +148,6 @@ def render_kpi_cards(df: pd.DataFrame) -> dbc.Row:
         ),
         dbc.Col(
             render_kpi_card(
-                # [แก้ไข Title]: เปลี่ยนชื่อหัวข้อ
                 title="รายได้ที่พบบ่อยที่สุด",
                 value=income_value,
                 unit="บาท",

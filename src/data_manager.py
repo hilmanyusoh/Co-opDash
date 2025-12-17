@@ -10,9 +10,9 @@ from typing import Optional, Tuple
 
 from .utils import calculate_age_from_dob
 
-# =========================
+
 # PostgreSQL Configuration
-# =========================
+
 PG_CONFIG = {
     "user": os.getenv("POSTGRES_USER", "myuser"),
     "password": os.getenv("POSTGRES_PASSWORD", "mypassword"),
@@ -21,11 +21,10 @@ PG_CONFIG = {
     "database": os.getenv("POSTGRES_DB", "mydatabase"),
 }
 
-# =========================
+
 # Create Engine
-# =========================
+
 def get_pg_engine():
-    """สร้างและคืนค่า PostgreSQL engine"""
     try:
         engine = create_engine(
             f"postgresql+psycopg2://{PG_CONFIG['user']}:{PG_CONFIG['password']}"
@@ -42,11 +41,11 @@ def get_pg_engine():
         return None
 
 
-# =========================
+
 # Load Data from PostgreSQL
-# =========================
+# โหลดและประมวลผลข้อมูลสมาชิกจาก PostgreSQL
+
 def load_data() -> pd.DataFrame:
-    """โหลดและประมวลผลข้อมูลสมาชิกจาก PostgreSQL"""
     engine = get_pg_engine()
     if engine is None:
         print("[WARNING] ไม่สามารถเชื่อมต่อฐานข้อมูลได้")
@@ -85,9 +84,9 @@ def load_data() -> pd.DataFrame:
     return df
 
 
-# =========================
+
 # Prepare Data for Export
-# =========================
+
 def prepare_df_for_export(df: pd.DataFrame) -> pd.DataFrame:
     """เตรียม DataFrame สำหรับ export โดยจัดรูปแบบคอลัมน์"""
     if df.empty:
@@ -108,11 +107,10 @@ def prepare_df_for_export(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-# =========================
+
 # Test Connection
-# =========================
+
 def test_connection() -> bool:
-    """ทดสอบการเชื่อมต่อฐานข้อมูล"""
     engine = get_pg_engine()
     if engine is None:
         return False

@@ -4,9 +4,9 @@ from dash import html
 import dash_bootstrap_components as dbc
 import datetime
 
-# =========================
+
 # Sidebar Style
-# =========================
+
 SIDEBAR_STYLE = {
     "position": "fixed",
     "top": 0,
@@ -20,9 +20,9 @@ SIDEBAR_STYLE = {
     "z-index": 1000,
 }
 
-# =========================
+
 # Navigation Items
-# =========================
+
 NAV_ITEMS = [
     {
         "label": "เพิ่มสมาชิก",
@@ -41,12 +41,11 @@ NAV_ITEMS = [
     },
 ]
 
-# =========================
-# Sidebar Layout
-# =========================
+
+# Sidebar Layout 
+# สร้าง Sidebar พร้อมเมนูนำทาง
+
 def render_sidebar():
-    """สร้าง Sidebar พร้อมเมนูนำทาง"""
-    
     current_time = datetime.datetime.now().strftime('%d/%m/%Y %H:%M')
     
     return html.Div([

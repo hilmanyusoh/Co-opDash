@@ -65,5 +65,4 @@ review.register_callbacks(app)
 
 # รันแอปพลิเคชัน 
 if __name__ == '__main__':
-    # รันจาก index.py 
     app.run(debug=True)
