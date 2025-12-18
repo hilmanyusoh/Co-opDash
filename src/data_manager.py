@@ -11,11 +11,11 @@ from .utils import calculate_age_from_dob
 # PostgreSQL Configuration
 
 PG_CONFIG = {
-    "user": os.getenv("DB_USER", "postgres"),
-    "password": os.getenv("DB_PASSWORD", "019604"),
+    "user": os.getenv("DB_USER", "myuser"),
+    "password": os.getenv("DB_PASSWORD", "mypassword"),
     "host": os.getenv("DB_HOST", "localhost"),
     "port": int(os.getenv("DB_PORT", 5432)),
-    "database": os.getenv("DB_NAME", "icorpdash"),
+    "database": os.getenv("DB_NAME", "mydatabase"),
 }
 
 
