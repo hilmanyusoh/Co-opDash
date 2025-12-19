@@ -18,7 +18,7 @@ COLOR_MAP = {
 
 
 # =========================
-# Single KPI Card (เหมือนเดิม)
+# Single KPI Card
 # =========================
 def render_kpi_card(
     title: str,

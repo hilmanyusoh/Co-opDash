@@ -20,9 +20,8 @@ PG_CONFIG = {
 
 
 
-# =========================
-# Create Engine
 
+# Create Engine
 
 def get_pg_engine():
     try:
@@ -32,6 +31,7 @@ def get_pg_engine():
             pool_pre_ping=True,
             pool_recycle=3600,
         )
+        
         # ทดสอบการเชื่อมต่อ
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
@@ -99,7 +99,7 @@ def prepare_df_for_export(df: pd.DataFrame) -> pd.DataFrame:
             lambda x: f"{x:,.0f}" if pd.notna(x) else ""
         )
 
-    # ลบคอลัมน์ชั่วคราว
+
     temp_cols = ["Income_Clean", "Age", "Age_Group"]
     df.drop(columns=[c for c in temp_cols if c in df.columns], inplace=True)
 
