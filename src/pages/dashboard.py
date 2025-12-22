@@ -20,10 +20,10 @@ def preprocess_data(df):
 
     # 1. ทำความสะอาด Income
     if "income" in df.columns:
-        df["Income_Clean"] = (
+        df["income"] = (
             df["income"].astype(str).str.replace(",", "", regex=False).str.strip()
         )
-        df["Income_Clean"] = pd.to_numeric(df["Income_Clean"], errors="coerce").fillna(
+        df["income"] = pd.to_numeric(df["income"], errors="coerce").fillna(
             0
         )
 
@@ -166,21 +166,38 @@ def create_income_distribution_chart(df):
     df_filtered = df[df["Income_Clean"] > 0]
     df_income_counts = df_filtered["Income_Clean"].value_counts().reset_index()
     df_income_counts.columns = ["รายได้ (บาท)", "จำนวนสมาชิก"]
-    df_top_income = df_income_counts.sort_values("จำนวนสมาชิก", ascending=False).head(10)
-    fig = px.bar(
-        df_top_income,
-        x="รายได้ (บาท)",
-        y="จำนวนสมาชิก",
-        title="รายได้ที่พบบ่อย Top 10",
-        color="จำนวนสมาชิก",
-        color_continuous_scale="Viridis",
+    df_top_income = df_income_counts.sort_values("จำนวนสมาชิก", ascending=False).head(30)
+    df_filtered = df[df["Income_Clean"] > 0].copy()
+
+    bins = [0, 10000, 20000, 30000, 50000, float("inf")]
+    labels = ["< 10k", "10k–20k", "20k–30k", "30k–50k", "50k+"]
+
+    df_filtered["Income_Group"] = pd.cut(
+        df_filtered["Income_Clean"],
+        bins=bins,
+        labels=labels,
+        right=False,
+        ordered=True,
     )
+
+    df_group = df_filtered["Income_Group"].value_counts().sort_values(ascending=False).reset_index()
+    df_group.columns = ["ช่วงรายได้", "จำนวนสมาชิก"]
+
+    fig = px.bar(
+        df_group,
+        x="ช่วงรายได้",
+        y="จำนวนสมาชิก",
+        title="จำนวนสมาชิกตามช่วงรายได้",
+        color="ช่วงรายได้",
+        color_discrete_sequence=px.colors.qualitative.Set2,
+    )
+
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#64748b", size=12),
-        title=dict(font=dict(size=16, color="#1e293b"), x=0.5),
+        title=dict(x=0.5),
     )
+
     return fig
 
 
@@ -209,9 +226,9 @@ def create_popular_career_chart(df):
     return fig
 
 
-# --- ส่วนที่แก้ไขใหม่ ---
+
 def create_monthly_application_chart(df):
-    """6. แผนภูมิสมาชิกที่สมัครรายเดือน (ตามข้อมูล)"""
+
     if "registration_date" not in df.columns:
         return px.line(title="ไม่พบข้อมูล registration_date")
 
@@ -233,7 +250,7 @@ def create_monthly_application_chart(df):
         x="MonthYear",
         y="จำนวนผู้สมัคร",
         markers=True,
-        text="จำนวนผู้สมัคร",  # แสดงตัวเลขบนจุด
+        text="จำนวนผู้สมัคร",  
         title="สมาชิกที่สมัครรายเดือน (ตามข้อมูล)",
         labels={"MonthYear": "เดือน-ปี ที่สมัคร", "จำนวนผู้สมัคร": "จำนวนสมาชิก (ราย)"},
     )

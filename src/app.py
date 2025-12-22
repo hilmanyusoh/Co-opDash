@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from .components.sidebar import render_sidebar
 from .pages import dashboard
 
-load_dotenv()  # ⭐ โหลด .env
+load_dotenv()  
 
 # สร้าง Dash Instance
 app = Dash(
@@ -61,7 +61,7 @@ def render_page_content(pathname):
     if pathname == "/" or pathname == "/dashboard":
         return dashboard.layout
 
-    # กรณีไม่พบหน้า (404)
+
     return dbc.Jumbotron(
         [
             html.H1("404: Not found", className="text-danger"),

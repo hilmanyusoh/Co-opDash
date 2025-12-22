@@ -27,7 +27,6 @@ def render_kpi_card(
     icon_class: str = "fa-chart-line",
     color_class: str = "primary",
 ) -> dbc.Card:
-    """สร้าง KPI Card เดี่ยว"""
 
     card_color = COLOR_MAP.get(color_class, COLOR_MAP["primary"])
 
@@ -73,13 +72,11 @@ def render_kpi_card(
 
 
 def render_kpi_cards(df: pd.DataFrame) -> dbc.Row:
-    """สร้างกลุ่ม KPI Cards"""
 
     if df.empty:
         return dbc.Alert(
             [
                 html.I(className="fas fa-exclamation-circle me-2"),
-                "ไม่พบข้อมูลสำหรับแสดง KPI",
             ],
             color="warning",
             className="mb-4 text-center",
@@ -100,9 +97,9 @@ def render_kpi_cards(df: pd.DataFrame) -> dbc.Row:
 
     # 3. สาขาที่สมาชิกใช้บริการมากที่สุด
     branch_value = "N/A"
-    if "Branch_code" in df.columns and not df["Branch_code"].isnull().all():
+    if "branch_no" in df.columns and not df["branch_no"].isnull().all():
         try:
-            mode_series = df["Branch_code"].mode()
+            mode_series = df["branch_no"].mode()
             if len(mode_series) > 0:
                 branch_value = str(mode_series.iloc[0])
         except:
@@ -110,17 +107,28 @@ def render_kpi_cards(df: pd.DataFrame) -> dbc.Row:
 
     # 4. รายได้ที่สมาชิกมีมากที่สุด (Mode Income)
     income_value = "N/A"
-    if "Income_Clean" in df.columns and not df["Income_Clean"].isnull().all():
+
+    if "income" in df.columns and not df["income"].isnull().all():
         try:
-            non_zero_income = df[df["Income_Clean"] > 0]["Income_Clean"]
+            df_income = df[df["income"] > 0].copy()
 
-            if not non_zero_income.empty:
-                # ใช้ .mode() เพื่อหารายได้ที่พบบ่อยที่สุด
-                mode_income = non_zero_income.mode()
+            bins = [0, 10000, 20000, 30000, 50000, float("inf")]
+            labels = ["< 10k", "10k–20k", "20k–30k", "30k–50k", "50k+"]
 
-                if len(mode_income) > 0:
-                    # แสดง Mode ตัวแรก และจัดรูปแบบให้มีจุลภาค
-                    income_value = f"{mode_income.iloc[0]:,.0f}"
+            df_income["Income_Group"] = pd.cut(
+                df_income["income"],
+                bins=bins,
+                labels=labels,
+                right=False,
+                ordered=True,
+            )
+
+            # หา Income Group ที่พบบ่อยที่สุด
+            mode_group = df_income["Income_Group"].mode()
+
+            if len(mode_group) > 0:
+                income_value = str(mode_group.iloc[0])
+
         except:
             pass
 
