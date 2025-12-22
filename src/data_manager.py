@@ -54,6 +54,12 @@ def load_data() -> pd.DataFrame:
         query = """
         SELECT 
             m.*, 
+            a.house_no, 
+            a.moo AS village_no, 
+            a.street AS road, 
+            a.subdistrict AS sub_area, 
+            a.district AS district_area, 
+            a.postal_code, 
             c.career_name, 
             b.branch_no, 
             g.gender_name,
@@ -62,9 +68,10 @@ def load_data() -> pd.DataFrame:
         LEFT JOIN careers c ON m.career_id = c.career_id
         LEFT JOIN branches b ON m.branch_id = b.branch_id
         LEFT JOIN gender g ON m.gender_id = g.gender_id
-        LEFT JOIN addresses a ON m.member_id = a.member_id
+        LEFT JOIN addresses a ON m.member_id = a.member_id  -- เหลือบรรทัดนี้ไว้แค่บรรทัดเดียว
         LEFT JOIN provinces p ON a.province_id = p.province_id
         """
+
         with engine.connect() as conn:
             df = pd.read_sql(query, conn)
     except SQLAlchemyError as e:
@@ -76,7 +83,7 @@ def load_data() -> pd.DataFrame:
     if df.empty:
         return df
 
-    # --- จุดที่ต้องแก้ตาม Schema ใหม่ ---
+
 
     # 1. แก้ไขชื่อคอลัมน์วันเกิด: ใน SQL ใหม่คุณใช้ 'birthday' แต่ในโค้ดเดิมใช้ 'dob'
     date_of_birth_col = "birthday" 
@@ -90,8 +97,7 @@ def load_data() -> pd.DataFrame:
         )
 
     # 2. จัดการคอลัมน์รายได้: 
-    # ใน SQL ใหม่เป็น NUMERIC (Decimal) อยู่แล้ว ไม่ต้องลบคอมมาก็ได้ 
-    # แต่ใส่โค้ดป้องกันไว้เผื่อกรณีข้อมูลมาเป็น String
+
     if "income" in df.columns:
         df["Income_Clean"] = pd.to_numeric(
             df["income"].astype(str).str.replace(",", "", regex=False), errors="coerce"

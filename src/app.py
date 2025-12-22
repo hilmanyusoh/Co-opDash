@@ -4,17 +4,17 @@ import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output
 from dotenv import load_dotenv
 
-# Imports Layout และ Register Functions จากแต่ละ Page
+# Import หน้าที่จำเป็น
 from .components.sidebar import render_sidebar
-from .pages import dashboard
+from .pages import dashboard  # เปลี่ยนจาก dashboard เป็น analysis ให้ตรงกับชื่อไฟล์
+from .pages import addressdash # เพิ่มการ Import หน้าที่อยู่
 
 load_dotenv()  
 
-# สร้าง Dash Instance
 app = Dash(
     __name__,
     external_stylesheets=[
-        dbc.themes.COSMO,  # ธีมสีสวย เรียบง่าย
+        dbc.themes.COSMO,
         "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
         "https://fonts.googleapis.com",
         "https://fonts.gstatic.com",
@@ -26,25 +26,12 @@ app = Dash(
 
 app.title = "I-Corp Dash"
 
-
 # Layout Styles
-SIDEBAR_STYLE = {
-    "position": "fixed",
-    "top": 0,
-    "left": 0,
-    "bottom": 0,
-    "width": "18rem",
-    "padding": "2rem 1rem",
-    "background-color": "#f8f9fa",
-    "box-shadow": "2px 0 5px rgba(0, 0, 0, 0.1)",
-}
-
 CONTENT_STYLE = {
-    "margin-left": "18rem",
+    "margin-left": "285px", # ปรับให้เท่ากับความกว้าง sidebar ใน sidebar.py
     "padding": "1.5rem",
 }
 
-# การจัด Layout หลักของแอปพลิเคชัน
 app.layout = html.Div(
     [
         dcc.Location(id="url", refresh=False),
@@ -53,27 +40,32 @@ app.layout = html.Div(
     ]
 )
 
-
 # Callback หลัก: การจัดการ Routing
 @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
 def render_page_content(pathname):
-
+    # 1. หน้า Dashboard / Analysis หลัก
     if pathname == "/" or pathname == "/dashboard":
         return dashboard.layout
+    
+    # 2. หน้า วิเคราะห์ที่อยู่ (เพิ่มส่วนนี้)
+    elif pathname == "/addressdash":
+        return addressdash.layout
 
-
-    return dbc.Jumbotron(
+    # 3. หน้า 404 (เปลี่ยนจาก Jumbotron เป็น Div)
+    return html.Div(
         [
             html.H1("404: Not found", className="text-danger"),
             html.Hr(),
             html.P(f"เส้นทาง {pathname} ไม่ถูกต้อง"),
         ],
-        className="p-3",
+        className="p-3 bg-light rounded-3",
     )
 
-
 # Callbacks ของแต่ละ Page
-dashboard.register_callbacks(app)
+if hasattr(dashboard, 'register_callbacks'):
+    dashboard.register_callbacks(app)
+if hasattr(addressdash, 'register_callbacks'):
+    addressdash.register_callbacks(app)
 
 if __name__ == "__main__":
     app.run(

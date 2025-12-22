@@ -1,4 +1,4 @@
-# src/pages/analysis.py
+# src/pages/dashboard.py
 
 from dash import dcc, html
 import dash_bootstrap_components as dbc
@@ -10,9 +10,8 @@ from ..data_manager import load_data
 from ..components.kpi_cards import render_kpi_cards
 
 
-# ==================================================
 # Helper Functions: Data Preprocessing
-# ==================================================
+
 
 
 def preprocess_data(df):

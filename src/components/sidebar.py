@@ -4,9 +4,7 @@ from dash import html
 import dash_bootstrap_components as dbc
 import datetime
 
-
-# Sidebar Style
-
+# Sidebar Style (คงเดิมไว้)
 SIDEBAR_STYLE = {
     "position": "fixed",
     "top": 0,
@@ -20,32 +18,23 @@ SIDEBAR_STYLE = {
     "z-index": 1000,
 }
 
-
-# Navigation Items
-
+# ==================================================
+# Navigation Items (แก้ไขจุดนี้)
+# ==================================================
 NAV_ITEMS = [
-    # {
-    #     "label": "เพิ่มสมาชิก",
-    #     "href": "/home",
-    #     "icon": "fa-user-plus",
-    # },
     {
-        "label": "Dashboard",
+        "label": "ภาพรวมระบบ",
         "href": "/dashboard",
         "icon": "fa-solid fa-gauge",
     },
-    # {
-    #     "label": "ค้นหาข้อมูล",
-    #     "href": "/review",
-    #     "icon": "fa-search",
-    # },
+    {
+        "label": "วิเคราะห์ข้อมูลที่อยู่",
+        "href": "/addressdash",  # ต้องตรงกับ Path ที่ตั้งไว้ใน app.py
+        "icon": "fa-solid fa-map-location-dot", # เปลี่ยนไอคอนให้สื่อถึงแผนที่
+    },
 ]
 
-
 # Sidebar Layout
-# สร้าง Sidebar พร้อมเมนูนำทาง
-
-
 def render_sidebar():
     current_time = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
 
@@ -54,25 +43,23 @@ def render_sidebar():
             # Header
             html.Div(
                 [
-                    # html.I(className="fas fa-users-cog fa-2x text-primary mb-2"),
                     html.H4("I-Corp Dash", className="text-primary fw-bold mb-0"),
                 ],
                 className="text-center mb-3",
             ),
             html.Hr(className="my-3"),
-            # Description
-            # html.P("ระบบจัดการข้อมูลสมาชิก", className="text-muted text-center mb-4 small"),
+            
             # Navigation Menu
             dbc.Nav(
                 [
                     dbc.NavLink(
                         [
-                            html.I(className=f"fas {item['icon']} me-2"),
+                            html.I(className=f"fas {item['icon']} me-3"), # เพิ่มระยะห่าง icon นิดหน่อย
                             html.Span(item["label"]),
                         ],
                         href=item["href"],
                         active="exact",
-                        className="mb-2",
+                        className="mb-2 py-2 px-3", # เพิ่ม Padding ให้กดง่ายขึ้น
                         style={
                             "borderRadius": "8px",
                             "transition": "all 0.2s ease",
@@ -84,42 +71,26 @@ def render_sidebar():
                 pills=True,
                 className="flex-column",
             ),
-            # System Info
-            # html.Hr(className="my-4"),
-            # html.Div(
-            #     [
-            #         html.Small(
-            #             [
-            #                 html.I(
-            #                     className="fas fa-circle text-success me-2",
-            #                     style={"fontSize": "0.5rem"},
-            #                 ),
-            #                 "ระบบพร้อมใช้งาน",
-            #             ],
-            #             className="text-muted d-block mb-2",
-            #         ),
-            #         html.Small(
-            #             [
-            #                 html.I(className="fas fa-clock me-2 text-muted"),
-            #                 current_time,
-            #             ],
-            #             className="text-muted d-block",
-            #         ),
-            #     ],
-            #     className="px-2",
-            # ),
+
             # Footer
             html.Div(
                 [
                     html.Hr(className="my-3"),
                     html.Small(
-                        [html.I(className="fas fa-info-circle me-2"), "Dashboard v1.0"],
+                        [
+                            html.I(className="fas fa-clock me-2"),
+                            f"อัปเดต: {current_time}"
+                        ],
+                        className="text-muted text-center d-block mb-1",
+                    ),
+                    html.Small(
+                        [html.I(className="fas fa-info-circle me-2"), "v1.0.1"],
                         className="text-muted text-center d-block",
                     ),
                 ],
                 style={
                     "position": "absolute",
-                    "bottom": "10px",
+                    "bottom": "15px",
                     "left": "1rem",
                     "right": "1rem",
                 },
