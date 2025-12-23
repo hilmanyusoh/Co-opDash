@@ -1,25 +1,20 @@
-# src/components/kpi_cards.py
-
 from dash import html
 import dash_bootstrap_components as dbc
 import pandas as pd
 from typing import Any
 
-
-# สีของการ์ด
-
+# ชุดสีมาตรฐานสำหรับ overview
 COLOR_MAP = {
-    "primary": "#007bff",
-    "purple": "#6f42c1",
-    "success": "#28a745",
-    "orange": "#fd7e14",
-    "info": "#17a2b8",
+    "primary": "#007bff",   
+    "purple": "#6f42c1",    
+    "success": "#28a745",   
+    "orange": "#fd7e14",    
+    "info": "#17a2b8",      #
 }
 
-
-# =========================
-# Single KPI Card
-# =========================
+# ==================================================
+# 1. Component พื้นฐาน: Single KPI Card
+# ==================================================
 def render_kpi_card(
     title: str,
     value: Any,
@@ -27,166 +22,124 @@ def render_kpi_card(
     icon_class: str = "fa-chart-line",
     color_class: str = "primary",
 ) -> dbc.Card:
-
     card_color = COLOR_MAP.get(color_class, COLOR_MAP["primary"])
-
     return dbc.Card(
-        dbc.CardBody(
-            [
-                html.Div(
-                    [
-                        html.I(
-                            className=f"fas {icon_class} fa-2x me-3 text-white",
-                            style={"opacity": "0.9"},
-                        ),
-                        html.Div(
-                            [
-                                html.H6(
-                                    title,
-                                    className="text-white-50 mb-1 fw-light",
-                                    style={"fontSize": "0.85rem"},
-                                ),
-                                html.H3(value, className="text-white fw-bold mb-0"),
-                                (
-                                    html.Small(unit, className="text-white-50")
-                                    if unit
-                                    else None
-                                ),
-                            ],
-                            className="text-end",
-                        ),
-                    ],
-                    className="d-flex justify-content-between align-items-center",
+        dbc.CardBody([
+            html.Div([
+                html.I(
+                    className=f"fas {icon_class} fa-2x me-3 text-white",
+                    style={"opacity": "0.8"}
                 ),
-            ],
-            className="py-3",
-        ),
+                html.Div([
+                    html.H6(title, className="text-white-50 mb-1 fw-light", style={"fontSize": "0.85rem"}),
+                    html.H3(value, className="text-white fw-bold mb-0"),
+                    html.Small(unit, className="text-white-50") if unit else None,
+                ], className="text-end"),
+            ], className="d-flex justify-content-between align-items-center"),
+        ], className="py-3"),
         className="shadow rounded-3 border-0 h-100",
-        style={
-            "background": f"linear-gradient(135deg, {card_color} 0%, {card_color}cc 100%)",
-        },
+        style={"background": f"linear-gradient(135deg, {card_color} 0%, {card_color}cc 100%)"}
     )
 
 
-# KPI Cards Group (ส่วนที่แก้ไข Logic)
-
-
-def render_kpi_cards(df: pd.DataFrame) -> dbc.Row:
-
+# 2. KPI Overview
+def render_overview_kpis(df: pd.DataFrame) -> dbc.Row:
     if df.empty:
-        return dbc.Alert(
-            [
-                html.I(className="fas fa-exclamation-circle me-2"),
-            ],
-            color="warning",
-            className="mb-4 text-center",
-        )
+        return dbc.Alert("ไม่พบข้อมูลสำหรับการคำนวณสถิติ Overview", color="warning", className="text-center")
 
-    # 1. จำนวนสมาชิกทั้งหมด
+    # คำนวณค่าต่างๆ
     total_members = len(df)
+    total_branches = df["branch_no"].nunique() if "branch_no" in df.columns else 0
+    
+    # ตรวจสอบชื่อคอลัมน์จังหวัด (จาก SQL คุณคือ province_name)
+    prov_col = "province_name" if "province_name" in df.columns else "province"
+    total_provinces = df[prov_col].nunique() if prov_col in df.columns else 0
 
-    # 2. ช่วงอายุยอดนิยม
-    age_value = "N/A"
-    if "Age_Group" in df.columns and not df["Age_Group"].isnull().all():
-        try:
-            mode_series = df["Age_Group"].mode()
-            if len(mode_series) > 0:
-                age_value = str(mode_series.iloc[0])
-        except:
-            pass
+    # คำนวณรายได้รวม
+    total_income = df["Income_Clean"].sum() if "Income_Clean" in df.columns else 0
+    income_display = f"{total_income / 1_000_000:.2f}M" if total_income >= 1_000_000 else f"{total_income:,.0f}"
 
-    # 3. สาขาที่สมาชิกใช้บริการมากที่สุด
-    branch_value = "N/A"
-    if "branch_no" in df.columns and not df["branch_no"].isnull().all():
-        try:
-            mode_series = df["branch_no"].mode()
-            if len(mode_series) > 0:
-                branch_value = str(mode_series.iloc[0])
-        except:
-            pass
+    return dbc.Row([
+        dbc.Col(render_kpi_card("สมาชิกทั้งหมด", f"{total_members:,}", "คน", "fa-users", "primary"), lg=3, md=6, className="mb-3"),
+        dbc.Col(render_kpi_card("สาขาที่เปิดให้บริการ", f"{total_branches:,}", "สาขา", "fa-store", "purple"), lg=3, md=6, className="mb-3"),
+        dbc.Col(render_kpi_card("จังหวัดที่ครอบคลุม", f"{total_provinces:,}", "จังหวัด", "fa-map-marked-alt", "success"), lg=3, md=6, className="mb-3"),
+        dbc.Col(render_kpi_card("รายได้รวมสมาชิก", income_display, "บาท", "fa-hand-holding-usd", "orange"), lg=3, md=6, className="mb-3"),
+    ], className="g-3")
 
-    # 4. รายได้ที่สมาชิกมีมากที่สุด (Mode Income)
-    income_value = "N/A"
 
-    if "income" in df.columns and not df["income"].isnull().all():
-        try:
-            df_income = df[df["income"] > 0].copy()
+# 3. KPI Demographics
 
-            bins = [0, 10000, 20000, 30000, 50000, float("inf")]
-            labels = ["< 10k", "10k–20k", "20k–30k", "30k–50k", "50k+"]
+def render_demographic_kpis(df: pd.DataFrame) -> dbc.Row:
+    if df.empty:
+        return dbc.Alert("ไม่พบข้อมูลสำหรับการวิเคราะห์ Demographics", color="warning", className="text-center")
 
-            df_income["Income_Group"] = pd.cut(
-                df_income["income"],
-                bins=bins,
-                labels=labels,
-                right=False,
-                ordered=True,
-            )
+    # 1. นับเพศชาย-หญิง (นาย=ชาย, นาง/นางสาว=หญิง)
+    male_count = 0
+    female_count = 0
+    if "gender_name" in df.columns:
+        male_count = len(df[df["gender_name"] == "นาย"])
+        female_count = len(df[df["gender_name"].isin(["นาง", "นางสาว"])])
 
-            # หา Income Group ที่พบบ่อยที่สุด
-            mode_group = df_income["Income_Group"].mode()
+    # 2. คำนวณ Generation (Gen ยอดนิยม)
+    # ต้องมีคอลัมน์ birthday และถูกแปลงเป็น datetime แล้วใน preprocess_data
+    popular_gen = "N/A"
+    if "birthday" in df.columns and not df["birthday"].isnull().all():
+        def get_generation(b_date):
+            if pd.isnull(b_date): return None
+            year = b_date.year
+            if 1946 <= year <= 1964: return "Baby Boomer"
+            if 1965 <= year <= 1980: return "Gen X"
+            if 1981 <= year <= 1996: return "Gen Y"
+            if 1997 <= year <= 2012: return "Gen Z"
+            return "Other"
+        
+        df['gen'] = df['birthday'].apply(get_generation)
+        mode_gen = df['gen'].mode()
+        if not mode_gen.empty:
+            popular_gen = mode_gen[0]
 
-            if len(mode_group) > 0:
-                income_value = str(mode_group.iloc[0])
+    # 3. รายได้เฉลี่ย (Average Income)
+    avg_income = 0
+    if "Income_Clean" in df.columns:
+        # คำนวณเฉพาะคนที่มีรายได้มากกว่า 0 เพื่อความแม่นยำของค่าเฉลี่ย
+        valid_income = df[df["Income_Clean"] > 0]["Income_Clean"]
+        if not valid_income.empty:
+            avg_income = valid_income.mean()
 
-        except:
-            pass
+    return dbc.Row([
+        # 1. ชาย ทั้งหมด
+        dbc.Col(render_kpi_card(
+            title="สมาชิกเพศชาย",
+            value=f"{male_count:,}",
+            unit="คน",
+            icon_class="fa-mars",
+            color_class="primary"
+        ), lg=3, md=6, className="mb-3"),
 
-    return dbc.Row(
-        [
-            dbc.Col(
-                render_kpi_card(
-                    title="สมาชิกทั้งหมด",
-                    value=f"{total_members:,}",
-                    unit="คน",
-                    icon_class="fa-users",
-                    color_class="primary",
-                ),
-                lg=3,
-                md=6,
-                xs=12,
-                className="mb-3",
-            ),
-            dbc.Col(
-                render_kpi_card(
-                    title="ช่วงอายุยอดนิยม",
-                    value=age_value,
-                    unit="ปี",
-                    icon_class="fa-birthday-cake",
-                    color_class="purple",
-                ),
-                lg=3,
-                md=6,
-                xs=12,
-                className="mb-3",
-            ),
-            dbc.Col(
-                render_kpi_card(
-                    title="สาขาที่ใช้บริการมากที่สุด",
-                    value=branch_value,
-                    unit="รหัสสาขา",
-                    icon_class="fa-building",
-                    color_class="success",
-                ),
-                lg=3,
-                md=6,
-                xs=12,
-                className="mb-3",
-            ),
-            dbc.Col(
-                render_kpi_card(
-                    # [แก้ไข Title]: เปลี่ยนชื่อหัวข้อ
-                    title="รายได้ที่พบบ่อยที่สุด",
-                    value=income_value,
-                    unit="บาท",
-                    icon_class="fa-dollar-sign",
-                    color_class="orange",
-                ),
-                lg=3,
-                md=6,
-                xs=12,
-                className="mb-3",
-            ),
-        ],
-        className="g-3",
-    )
+        # 2. หญิง ทั้งหมด
+        dbc.Col(render_kpi_card(
+            title="สมาชิกเพศหญิง",
+            value=f"{female_count:,}",
+            unit="คน",
+            icon_class="fa-venus",
+            color_class="orange"
+        ), lg=3, md=6, className="mb-3"),
+
+        # 3. Generation (กลุ่มหลัก)
+        dbc.Col(render_kpi_card(
+            title="กลุ่ม Gen หลัก",
+            value=popular_gen,
+            unit="Majority",
+            icon_class="fa-id-card",
+            color_class="purple"
+        ), lg=3, md=6, className="mb-3"),
+
+        # 4. รายได้เฉลี่ย
+        dbc.Col(render_kpi_card(
+            title="รายได้เฉลี่ย",
+            value=f"{avg_income:,.0f}",
+            unit="บาท / เดือน",
+            icon_class="fa-wallet",
+            color_class="success"
+        ), lg=3, md=6, className="mb-3"),
+    ], className="g-3")

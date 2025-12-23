@@ -18,19 +18,29 @@ SIDEBAR_STYLE = {
     "z-index": 1000,
 }
 
-# ==================================================
-# Navigation Items (แก้ไขจุดนี้)
-# ==================================================
+
+# Navigation Items
+
 NAV_ITEMS = [
     {
-        "label": "ภาพรวมระบบ",
-        "href": "/dashboard",
+        "label": "ภาพรวมข้อมูล",
+        "href": "/overview",
         "icon": "fa-solid fa-gauge",
     },
     {
-        "label": "วิเคราะห์ข้อมูลที่อยู่",
-        "href": "/addressdash",  # ต้องตรงกับ Path ที่ตั้งไว้ใน app.py
-        "icon": "fa-solid fa-map-location-dot", # เปลี่ยนไอคอนให้สื่อถึงแผนที่
+        "label": "สมาชิก",
+        "href": "/demographics",  
+        "icon": "fa-solid fa-map-location-dot", 
+    },
+    {
+        "label": "ที่อยู่",
+        "href": "/addressdash",  
+        "icon": "fa-solid fa-map-location-dot", 
+    },
+    {
+        "label": "performance",
+        "href": "/performance",  
+        "icon": "fa-solid fa-map-location-dot", 
     },
 ]
 

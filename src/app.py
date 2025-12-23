@@ -6,8 +6,10 @@ from dotenv import load_dotenv
 
 # Import หน้าที่จำเป็น
 from .components.sidebar import render_sidebar
-from .pages import dashboard  # เปลี่ยนจาก dashboard เป็น analysis ให้ตรงกับชื่อไฟล์
-from .pages import addressdash # เพิ่มการ Import หน้าที่อยู่
+from .pages import overview  
+from .pages import demographics 
+from .pages import addressdash 
+from .pages import performance
 
 load_dotenv()  
 
@@ -43,13 +45,14 @@ app.layout = html.Div(
 # Callback หลัก: การจัดการ Routing
 @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
 def render_page_content(pathname):
-    # 1. หน้า Dashboard / Analysis หลัก
-    if pathname == "/" or pathname == "/dashboard":
-        return dashboard.layout
-    
-    # 2. หน้า วิเคราะห์ที่อยู่ (เพิ่มส่วนนี้)
-    elif pathname == "/addressdash":
+    if pathname == "/" or pathname == "/overview":
+        return overview.layout
+    elif pathname == "/demographics":
+        return demographics.layout
+    elif pathname == "/addressdash": # เพิ่มส่วนนี้
         return addressdash.layout
+    elif pathname == "/performance":
+        return performance.layout
 
     # 3. หน้า 404 (เปลี่ยนจาก Jumbotron เป็น Div)
     return html.Div(
@@ -62,10 +65,10 @@ def render_page_content(pathname):
     )
 
 # Callbacks ของแต่ละ Page
-if hasattr(dashboard, 'register_callbacks'):
-    dashboard.register_callbacks(app)
-if hasattr(addressdash, 'register_callbacks'):
-    addressdash.register_callbacks(app)
+if hasattr(overview, 'register_callbacks'):
+    overview.register_callbacks(app)
+if hasattr(demographics, 'register_callbacks'):
+    demographics.register_callbacks(app)
 
 if __name__ == "__main__":
     app.run(

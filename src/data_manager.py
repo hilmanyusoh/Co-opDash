@@ -40,8 +40,6 @@ def get_pg_engine():
 
 
 # Load Data from PostgreSQL
-# โหลดและประมวลผลข้อมูลสมาชิกจาก PostgreSQL
-
 
 def load_data() -> pd.DataFrame:
     engine = get_pg_engine()
@@ -68,7 +66,7 @@ def load_data() -> pd.DataFrame:
         LEFT JOIN careers c ON m.career_id = c.career_id
         LEFT JOIN branches b ON m.branch_id = b.branch_id
         LEFT JOIN gender g ON m.gender_id = g.gender_id
-        LEFT JOIN addresses a ON m.member_id = a.member_id  -- เหลือบรรทัดนี้ไว้แค่บรรทัดเดียว
+        LEFT JOIN addresses a ON m.member_id = a.member_id  
         LEFT JOIN provinces p ON a.province_id = p.province_id
         """
 
@@ -115,7 +113,6 @@ def load_data() -> pd.DataFrame:
 # Prepare Data for Export
 
 def prepare_df_for_export(df: pd.DataFrame) -> pd.DataFrame:
-    """เตรียม DataFrame สำหรับ export โดยจัดรูปแบบคอลัมน์"""
     if df.empty:
         return df
 
