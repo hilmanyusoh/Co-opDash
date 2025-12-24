@@ -33,8 +33,8 @@ NAV_ITEMS = [
         "icon": "fa-solid fa-map-location-dot", 
     },
     {
-        "label": "ที่อยู่",
-        "href": "/addressdash",  
+        "label": "สาขา",
+        "href": "/branches",  
         "icon": "fa-solid fa-map-location-dot", 
     },
     {

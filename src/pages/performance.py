@@ -2,136 +2,88 @@ from dash import dcc, html
 import dash_bootstrap_components as dbc
 import plotly.express as px
 import pandas as pd
+import plotly.graph_objects as go
+import numpy as np
 from ..data_manager import load_data
 
-# ==================================================
-# Analysis Functions
-# ==================================================
 
-def create_branch_performance_bar(df):
-    """เปรียบเทียบรายได้รวมแยกตามสาขา"""
-    if "branch_no" not in df.columns or "Income_Clean" not in df.columns:
-        return px.bar(title="ไม่พบข้อมูลรายได้รายสาขา")
+from ..components.kpi_cards import render_performance_kpis
+
+# ==================================================
+# 1. Chart Style Helper
+# ==================================================
+def chart_style(fig, title):
+    fig.update_layout(
+        title=f"<b>{title}</b>",
+        plot_bgcolor="rgba(245, 247, 250, 0.4)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Sarabun, sans-serif"),
+        margin=dict(l=40, r=40, t=60, b=40),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+    )
+    return fig
+
+# ==================================================
+# 2. กราฟพยากรณ์การเติบโต (Member Growth Forecast)
+# ==================================================
+def chart_growth_forecast(df):
+    # เตรียมข้อมูลสะสมรายเดือน
+    df['reg_date'] = pd.to_datetime(df['registration_date']).dt.to_period('M').dt.to_timestamp()
+    monthly_df = df.groupby('reg_date').size().reset_index(name='new_members')
+    monthly_df['cumulative_members'] = monthly_df['new_members'].cumsum()
     
-    branch_stats = df.groupby("branch_no")["Income_Clean"].sum().reset_index()
-    branch_stats.columns = ["สาขา", "รายได้รวม"]
-    branch_stats["สาขา"] = "สาขาที่ " + branch_stats["สาขา"].astype(str)
-
-    fig = px.bar(
-        branch_stats, x="สาขา", y="รายได้รวม",
-        text_auto='.2s',
-        title="<b>ประสิทธิภาพการสร้างรายได้แยกตามสาขา (Total Income)</b>",
-        color="รายได้รวม",
-        color_continuous_scale="Reds"
-    )
-    fig.update_layout(coloraxis_showscale=False, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-    return fig
-
-def create_member_growth_by_branch(df):
-    """วิเคราะห์การเพิ่มขึ้นของสมาชิกในแต่ละสาขาแยกตามปี"""
-    df['reg_year'] = pd.to_datetime(df['registration_date']).dt.year
-    growth = df.groupby(['reg_year', 'branch_no']).size().reset_index(name='new_members')
-    growth['branch_no'] = "สาขา " + growth['branch_no'].astype(str)
-
-    fig = px.line(
-        growth, x="reg_year", y="new_members", color="branch_no",
-        title="<b>แนวโน้มการหาสมาชิกใหม่รายสาขา (Growth Trend)</b>",
-        markers=True
-    )
-    fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-    return fig
-
-def create_efficiency_scatter(df):
-    """วิเคราะห์ความคุ้มค่า: จำนวนสมาชิก vs รายได้เฉลี่ย"""
-    eff = df.groupby("branch_no").agg({
-        "member_id": "count",
-        "Income_Clean": "mean"
-    }).reset_index()
-    eff.columns = ["สาขา", "จำนวนสมาชิก", "รายได้เฉลี่ย"]
-
-    fig = px.scatter(
-        eff, x="จำนวนสมาชิก", y="รายได้เฉลี่ย",
-        size="จำนวนสมาชิก", color="สาขา",
-        text="สาขา",
-        title="<b>Matrix วิเคราะห์ประสิทธิภาพ (Member Density vs Avg Income)</b>",
-        labels={"จำนวนสมาชิก": "ปริมาณสมาชิก (ราย)", "รายได้เฉลี่ย": "คุณภาพรายได้ (บาท)"}
-    )
-    fig.update_traces(textposition='top center')
-    return fig
-
-# ==================================================
-# Main Layout
-# ==================================================
+    # คำนวณค่าพยากรณ์แบบง่าย (Linear Trend)
+    last_val = monthly_df['cumulative_members'].iloc[-1]
+    avg_growth = monthly_df['new_members'].tail(6).mean()
+    
+    # สร้างข้อมูลอนาคต 12 เดือน
+    future_dates = pd.date_range(start=monthly_df['reg_date'].iloc[-1], periods=13, freq='MS')[1:]
+    future_vals = [last_val + (avg_growth * i) for i in range(1, 13)]
+    
+    fig = go.Figure()
+    
+    # เส้นข้อมูลจริง
+    fig.add_trace(go.Scatter(
+        x=monthly_df['reg_date'], y=monthly_df['cumulative_members'],
+        mode='lines+markers', name='ข้อมูลปัจจุบัน',
+        line=dict(color='#007bff', width=4),
+        fill='tozeroy', fillcolor='rgba(0, 123, 255, 0.1)'
+    ))
+    
+    # เส้นพยากรณ์
+    fig.add_trace(go.Scatter(
+        x=future_dates, y=future_vals,
+        mode='lines', name='คาดการณ์ 12 เดือนข้างหน้า',
+        line=dict(color='#6f42c1', width=4, dash='dash')
+    ))
+    
+    return chart_style(fig, "การคาดการณ์จำนวนสมาชิกสะสม (Growth Forecast)")
 
 def create_performance_layout():
     df = load_data()
-    
     if df.empty:
-        return dbc.Container(dbc.Alert("ไม่พบข้อมูลสำหรับการวิเคราะห์ประสิทธิภาพ", color="danger", className="mt-5 text-center"))
+        return dbc.Container(dbc.Alert("ไม่พบข้อมูล", color="danger", className="mt-5"))
 
-    # คำนวณ KPIs
-    best_branch = df.groupby("branch_no")["Income_Clean"].sum().idxmax()
-    avg_income_all = df["Income_Clean"].mean()
-    total_revenue = df["Income_Clean"].sum()
+    if "income" in df.columns:
+        df["Income_Clean"] = pd.to_numeric(df["income"].astype(str).str.replace(",", ""), errors="coerce").fillna(0)
 
-    return dbc.Container(
-        fluid=True,
-        className="p-4 bg-light",
-        children=[
-            html.Div([
-                html.H2("Branch Performance Analytics", className="fw-bold text-dark"),
-                html.P("การประเมินผลการดำเนินงานและศักยภาพการสร้างรายได้รายสาขา", className="text-muted"),
-            ], className="mb-4"),
+    # ฟังก์ชันช่วยสร้าง Card
+    def make_card(fig, width=12):
+        return dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=fig, config={'displayModeBar': False})), 
+                                className="shadow-sm border-0 rounded-4"), lg=width)
 
-            # KPI Cards
-            dbc.Row([
-                dbc.Col(dbc.Card([
-                    dbc.CardBody([
-                        html.Small("สาขาที่ทำรายได้สูงสุด", className="text-muted"),
-                        html.H4(f"สาขาที่ {best_branch}", className="text-danger fw-bold mb-0")
-                    ])
-                ], className="shadow-sm border-0 border-bottom border-danger border-4"), lg=4),
-                
-                dbc.Col(dbc.Card([
-                    dbc.CardBody([
-                        html.Small("รายได้รวมทั้งหมดในระบบ", className="text-muted"),
-                        html.H4(f"฿ {total_revenue:,.0f}", className="text-dark fw-bold mb-0")
-                    ])
-                ], className="shadow-sm border-0 border-bottom border-dark border-4"), lg=4),
-                
-                dbc.Col(dbc.Card([
-                    dbc.CardBody([
-                        html.Small("ค่าเป้าหมายรายได้เฉลี่ย (Benchmark)", className="text-muted"),
-                        html.H4(f"฿ {avg_income_all:,.0f}", className="text-primary fw-bold mb-0")
-                    ])
-                ], className="shadow-sm border-0 border-bottom border-primary border-4"), lg=4),
-            ], className="mb-4 g-3"),
+    return dbc.Container(fluid=True, className="p-4", children=[
+        html.Div([
+            html.H2("Performance & Growth Analysis", className="fw-bold", style={"color": "#1e293b"}),
+            html.P("การวิเคราะห์แนวโน้มและการคาดการณ์เพื่อการตัดสินใจเชิงกลยุทธ์", className="text-muted")
+        ], className="mb-4"),
 
-            # กราฟหลัก
-            dbc.Row([
-                dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=create_branch_performance_bar(df))), className="shadow-sm border-0"), lg=7),
-                dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=create_efficiency_scatter(df))), className="shadow-sm border-0"), lg=5),
-            ], className="g-4 mb-4"),
+        render_performance_kpis(df),
 
-            dbc.Row([
-                dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=create_member_growth_by_branch(df))), className="shadow-sm border-0 mb-4"), width=12),
-            ]),
-            
-            # ตารางสรุป Ranking
-            dbc.Card([
-                dbc.CardHeader(html.H5("ตารางเปรียบเทียบประสิทธิภาพรายสาขา (Ranking)", className="mb-0 fw-bold")),
-                dbc.CardBody([
-                    dbc.Table.from_dataframe(
-                        df.groupby("branch_no").agg({
-                            "member_id": "count",
-                            "Income_Clean": ["sum", "mean"]
-                        }).reset_index().sort_values(("Income_Clean", "sum"), ascending=False)
-                        .rename(columns={"branch_no": "รหัสสาขา", "member_id": "สมาชิก (ราย)", "Income_Clean": "รายได้", "count": "จำนวน", "sum": "ยอดรวม (บาท)", "mean": "เฉลี่ยต่อหัว"}),
-                        striped=True, hover=True, className="align-middle text-center mb-0"
-                    )
-                ])
-            ], className="shadow-sm border-0")
-        ]
-    )
+        # แถวที่ 1: การพยากรณ์ (เน้นใหญ่)
+        dbc.Row([
+            make_card(chart_growth_forecast(df), width=12),
+        ], className="mb-4"),
+    ])
 
 layout = create_performance_layout()

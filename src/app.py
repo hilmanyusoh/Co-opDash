@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from .components.sidebar import render_sidebar
 from .pages import overview  
 from .pages import demographics 
-from .pages import addressdash 
+from .pages import branches 
 from .pages import performance
 
 load_dotenv()  
@@ -49,8 +49,8 @@ def render_page_content(pathname):
         return overview.layout
     elif pathname == "/demographics":
         return demographics.layout
-    elif pathname == "/addressdash": # เพิ่มส่วนนี้
-        return addressdash.layout
+    elif pathname == "/branches": # เพิ่มส่วนนี้
+        return branches.layout
     elif pathname == "/performance":
         return performance.layout
 
