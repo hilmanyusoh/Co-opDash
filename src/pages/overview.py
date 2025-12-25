@@ -18,64 +18,108 @@ def preprocess_data(df):
     return df
 
 # ==================================================
-# Chart Helper
+# Chart Helper (พื้นฐานสไตล์กราฟ)
 # ==================================================
-def chart_style(fig, title):
+def apply_common_style(fig, title):
     fig.update_layout(
         title=f"<b>{title}</b>",
         plot_bgcolor="rgba(245, 247, 250, 0.25)",
         paper_bgcolor="rgba(0,0,0,0)",
         height=400,
-        margin=dict(t=50, b=20, l=20, r=20)
+        font=dict(family="Sarabun, sans-serif")
     )
     return fig
 
 # ==================================================
 # Charts
 # ==================================================
+
+# 1. สัดส่วนสมาชิก - Legend อยู่ด้านบน
 def chart_gender_pie(df):
     counts = df["Gender_Group"].value_counts()
     fig = go.Figure(go.Pie(
-        labels=counts.index, values=counts.values, hole=0.5, pull=[0.05, 0, 0],
+        labels=counts.index, values=counts.values, hole=0.5,
         marker=dict(colors=["#6366f1", "#ec4899", "#94a3b8"], line=dict(color='#fff', width=2))
     ))
     fig.update_traces(textinfo='percent+label')
-    return chart_style(fig, "สัดส่วนเพศสมาชิก")
+    
+    apply_common_style(fig, "สัดส่วนเพศสมาชิก")
+    fig.update_layout(
+        showlegend=True,
+        legend=dict(
+            orientation="h",   # แนวนอน
+            yanchor="bottom",
+            y=1.02,            # วางเหนือพื้นที่กราฟ
+            xanchor="center",
+            x=0.5
+        ),
+        margin=dict(t=80, b=20, l=20, r=20) # เพิ่ม margin บนเพื่อให้ไม่ทับ Title
+    )
+    return fig
 
+# 2. ความหนาแน่นสมาชิกรายสาขา - Legend ด้านข้าง (แยก 1, 2, 3...)
 def chart_branch_bar(df):
     branch_col = "branch_no" if "branch_no" in df.columns else "branch_code"
-    counts = df[branch_col].value_counts().reset_index()
+    counts = df[branch_col].value_counts().sort_index().reset_index()
     counts.columns = ["สาขา", "จำนวน"]
+    counts["สาขา"] = counts["สาขา"].astype(str) # แปลงเป็น string เพื่อให้ legend แยกเป็นรายค่า
     
-    fig = go.Figure(go.Bar(
-        x=["สาขา " + str(x) for x in counts["สาขา"]], y=counts["จำนวน"],
-        marker=dict(color=counts["จำนวน"], colorscale='Viridis',
-                   line=dict(color='rgba(255,255,255,0.5)', width=1.5)),
-        text=counts["จำนวน"], textposition='auto'
-    ))
-    return chart_style(fig, "ความหนาแน่นสมาชิกรายสาขา")
+    fig = px.bar(
+        counts, x="สาขา", y="จำนวน", 
+        color="สาขา", 
+        text="จำนวน",
+        color_discrete_sequence=px.colors.qualitative.Safe
+    )
+    fig.update_traces(textposition='auto')
+    
+    apply_common_style(fig, "ความหนาแน่นสมาชิกรายสาขา")
+    fig.update_layout(
+        showlegend=True,
+        legend=dict(orientation="v", yanchor="middle", y=0.5, xanchor="left", x=1.02),
+        margin=dict(t=50, b=20, l=20, r=100)
+    )
+    return fig
 
+# 3. Top 10 Provinces - Legend ด้านข้าง
 def chart_province_bar(df):
     prov_col = "province_name" if "province_name" in df.columns else "province"
-    counts = df[prov_col].value_counts().head(10).sort_values()
+    counts = df[prov_col].value_counts().head(10).reset_index()
+    counts.columns = ["จังหวัด", "จำนวน"]
     
-    fig = go.Figure(go.Bar(
-        x=counts.values, y=counts.index, orientation='h',
-        marker=dict(color='rgb(158,202,225)', line=dict(color='rgb(8,48,107)', width=1.5))
-    ))
-    return chart_style(fig, "Top 10 Provinces")
+    fig = px.bar(
+        counts, x="จำนวน", y="จังหวัด", orientation='h',
+        color="จังหวัด",
+        color_discrete_sequence=px.colors.qualitative.Pastel
+    )
+    
+    apply_common_style(fig, "Top 10 Provinces")
+    fig.update_layout(
+        showlegend=True,
+        legend=dict(orientation="v", yanchor="middle", y=0.5, xanchor="left", x=1.02),
+        margin=dict(t=50, b=20, l=20, r=120)
+    )
+    return fig
 
+# 4. Top 10 Career Income - Legend ด้านข้าง
 def chart_income_bar(df):
     career_col = "career_name" if "career_name" in df.columns else "career"
-    income_avg = df.groupby(career_col)["Income_Clean"].mean().sort_values(ascending=False).head(10)
+    income_avg = df.groupby(career_col)["Income_Clean"].mean().sort_values(ascending=False).head(10).reset_index()
+    income_avg.columns = ["อาชีพ", "รายได้เฉลี่ย"]
     
-    fig = go.Figure(go.Bar(
-        x=income_avg.index, y=income_avg.values,
-        marker=dict(color=income_avg.values, colorscale='Reds',
-                   line=dict(color='rgb(8,48,107)', width=1.5), opacity=0.85, showscale=False),
-        text=[f'฿{v:,.0f}' for v in income_avg.values], textposition='auto'
-    ))
-    return chart_style(fig, "Top 10 Career Income")
+    fig = px.bar(
+        income_avg, x="อาชีพ", y="รายได้เฉลี่ย",
+        color="อาชีพ",
+        text_auto=',.0f',
+        color_discrete_sequence=px.colors.qualitative.Vivid
+    )
+    
+    apply_common_style(fig, "Top 10 Career Income")
+    fig.update_layout(
+        showlegend=True,
+        legend=dict(orientation="v", yanchor="middle", y=0.5, xanchor="left", x=1.02),
+        margin=dict(t=50, b=20, l=20, r=120)
+    )
+    return fig
 
 # ==================================================
 # Layout
@@ -93,7 +137,7 @@ def create_analysis_layout():
         fluid=True,
         style={"backgroundColor": "transparent", "padding": "20px"},
         children=[
-            html.H2("Overview", className="fw-bold mb-4", 
+            html.H2("ข้อมูลภาพรวม", className="fw-bold mb-4", 
                    style={"color": "#1e293b", "letterSpacing": "0.5px"}),
             
             render_overview_kpis(df),
