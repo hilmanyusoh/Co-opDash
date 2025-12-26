@@ -64,29 +64,27 @@ def render_sidebar():
                 [
                     dbc.AccordionItem(
                         dbc.Nav(
-                            [render_sub_nav("ข้อมูลประชากร", "/demographics", "fa-user-group")],
-                            vertical=True, pills=True
+                            [
+                                render_sub_nav("ข้อมูลประชากร", "/member", "fa-user-group"),
+                                render_sub_nav("ข้อมูลสาขา", "/branches", "fa-building-columns"),
+                                render_sub_nav("ข้อมูลเชิงพื้นที่", "/address", "fa-map-location-dot"),
+
+                            ],
+                            vertical=True, 
+                            pills=True
                         ),
-                        title=html.Span([html.I(className="fas fa-users me-3"), "สมาชิก"], className="fw-medium"),
+                        title=html.Span([
+                            html.I(className="fas fa-users me-3", style={"width": "20px"}), 
+                            "สมาชิก"
+                        ], className="fw-medium"),
                         item_id="acc_members",
                     ),
                 ],
-                flush=True, start_collapsed=True, className="mb-1"
-            ),
-
-            # 3. สาขา (Accordion)
-            dbc.Accordion(
-                [
-                    dbc.AccordionItem(
-                        dbc.Nav(
-                            [render_sub_nav("ข้อมูลสาขา", "/branches", "fa-building-list")],
-                            vertical=True, pills=True
-                        ),
-                        title=html.Span([html.I(className="fas fa-city me-3"), "สาขา"], className="fw-medium"),
-                        item_id="acc_branches",
-                    ),
-                ],
-                flush=True, start_collapsed=True, className="mb-1"
+                flush=True, 
+                start_collapsed=True, 
+                className="mb-1 border-0",
+                # ปรับสไตล์ให้ Accordion ดูสะอาด
+                style={"--bs-accordion-bg": "transparent", "--bs-accordion-border-color": "transparent"}
             ),
 
             # 4. Performance (ไม่มีเมนูย่อย)

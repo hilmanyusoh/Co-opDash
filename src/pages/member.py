@@ -4,12 +4,12 @@ import plotly.express as px
 import pandas as pd
 import plotly.graph_objects as go
 from ..data_manager import load_data
-from ..components.kpi_cards import render_demographic_kpis
+from ..components.kpi_cards import render_member_kpis
 
 # ==================================================
 # Data Processing
 # ==================================================
-def process_demographics(df):
+def process_member(df):
     if df.empty: return df
     
     if "gender_name" in df.columns:
@@ -149,7 +149,7 @@ def chart_income_career(df):
 # ==================================================
 def create_demo_layout():
     df = load_data()
-    df = process_demographics(df)
+    df = process_member(df)
     
     if df.empty:
         return dbc.Container(dbc.Alert("ไม่พบข้อมูล", color="warning", className="mt-5"))
@@ -166,7 +166,7 @@ def create_demo_layout():
                        style={"color": "#1e293b", "letterSpacing": "0.5px"}),
             ], className="mb-4"),
 
-            render_demographic_kpis(df),
+            render_member_kpis(df),
 
             dbc.Row([dbc.Col(card(chart_growth_time(df)), width=12)], className="g-4"),
             

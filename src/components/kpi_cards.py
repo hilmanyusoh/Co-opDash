@@ -67,11 +67,11 @@ def render_overview_kpis(df: pd.DataFrame) -> dbc.Row:
     ], className="g-3 mb-4")
 
 # ==================================================
-# 3. KPI Demographics (สมาชิก)
+# 3. KPI member 
 # ==================================================
-def render_demographic_kpis(df: pd.DataFrame) -> dbc.Row:
+def render_member_kpis(df: pd.DataFrame) -> dbc.Row:
     if df.empty:
-        return dbc.Alert("ไม่พบข้อมูล Demographics", color="warning", className="text-center")
+        return dbc.Alert("ไม่พบข้อมูล member", color="warning", className="text-center")
 
     total_members = len(df)
     male_count = len(df[df["gender_name"] == "นาย"]) if "gender_name" in df.columns else 0
@@ -134,9 +134,29 @@ def render_branch_kpis(df: pd.DataFrame) -> dbc.Row:
         dbc.Col(render_kpi_card("ระยะเวลาอนุมัติเฉลี่ย", avg_approval_days, "วัน (เฉลี่ย)", "fa-clock", "info"), lg=3, md=6),
         dbc.Col(render_kpi_card("รายได้เฉลี่ยสมาชิก", f"{avg_income:,.0f}", "บาท/เดือน", "fa-money-bill-wave", "success"), lg=3, md=6),
     ], className="g-3 mb-4")
+    
+# ==================================================
+# 5. KPI Address (อัปเดตชื่อคอลัมน์ให้ตรงกับ SQL JOIN)
+# ==================================================
+def render_address_kpis(df: pd.DataFrame) -> dbc.Row:
+    if df.empty:
+        return dbc.Alert("ไม่พบข้อมูลที่อยู่", color="warning", className="text-center")
+
+    # คำนวณ Unique values โดยใช้ชื่อคอลัมน์จริงจาก SQL JOIN
+    n_province = df['province_name'].nunique() if 'province_name' in df.columns else 0
+    n_district = df['district_area'].nunique() if 'district_area' in df.columns else 0
+    n_subdistrict = df['sub_area'].nunique() if 'sub_area' in df.columns else 0
+    n_village = df['village_no'].nunique() if 'village_no' in df.columns else 0
+
+    return dbc.Row([
+        dbc.Col(render_kpi_card("จังหวัดทั้งหมด", f"{n_province:,}", "จังหวัด", "fa-map-location-dot", "primary"), lg=3, md=6),
+        dbc.Col(render_kpi_card("อำเภอทั้งหมด", f"{n_district:,}", "อำเภอ", "fa-city", "success"), lg=3, md=6),
+        dbc.Col(render_kpi_card("ตำบลทั้งหมด", f"{n_subdistrict:,}", "ตำบล", "fa-house-chimney-window", "orange"), lg=3, md=6),
+        dbc.Col(render_kpi_card("หมู่บ้านทั้งหมด", f"{n_village:,}", "หมู่บ้าน", "fa-tree-city", "red"), lg=3, md=6),
+    ], className="g-3 mb-4")
 
 # ==================================================
-# 5. KPI Performance & Growth Forecast
+# 6. KPI Performance (คงเดิมแต่เพิ่ม Type Hint)
 # ==================================================
 def render_performance_kpis(df: pd.DataFrame) -> dbc.Row:
     if df.empty:
@@ -147,15 +167,15 @@ def render_performance_kpis(df: pd.DataFrame) -> dbc.Row:
     temp_df['reg_date'] = pd.to_datetime(temp_df['registration_date'], errors='coerce')
     temp_df = temp_df.dropna(subset=['reg_date']).sort_values('reg_date')
 
-    # 1. คำนวณอัตราการเติบโตเฉลี่ย (Monthly Growth) 6 เดือนล่าสุด
+    # 1. Monthly Growth 6 เดือนล่าสุด
     monthly_counts = temp_df.set_index('reg_date').resample('ME').size()
     avg_growth_per_month = monthly_counts.tail(6).mean() if not monthly_counts.empty else 0
     
-    # 2. คาดการณ์สมาชิกในอีก 12 เดือน (Simple Projection)
+    # 2. คาดการณ์สมาชิกในอีก 12 เดือน
     current_members = len(temp_df)
     projected_12m = current_members + (avg_growth_per_month * 12)
 
-    # 3. คำนวณ Growth Rate (%) เทียบปีต่อปี
+    # 3. Growth Rate (%) ปีต่อปี
     current_year = pd.Timestamp.now().year
     this_year_count = len(temp_df[temp_df['reg_date'].dt.year == current_year])
     last_year_count = len(temp_df[temp_df['reg_date'].dt.year == current_year - 1])
@@ -164,7 +184,7 @@ def render_performance_kpis(df: pd.DataFrame) -> dbc.Row:
     if last_year_count > 0:
         growth_rate = ((this_year_count - last_year_count) / last_year_count) * 100
     
-    # 4. ประมาณการรายได้รวมในอนาคต (EndOfYear Forecast)
+    # 4. ประมาณการรายได้รวมในอนาคต
     avg_income = temp_df["Income_Clean"].mean() if "Income_Clean" in temp_df.columns else 0
     forecasted_income = projected_12m * avg_income
 

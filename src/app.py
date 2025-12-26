@@ -7,8 +7,9 @@ from dotenv import load_dotenv
 # Import หน้าที่จำเป็น
 from .components.sidebar import render_sidebar
 from .pages import overview  
-from .pages import demographics 
+from .pages import member 
 from .pages import branches 
+from .pages import address
 from .pages import performance
 
 load_dotenv()  
@@ -47,10 +48,12 @@ app.layout = html.Div(
 def render_page_content(pathname):
     if pathname == "/" or pathname == "/overview":
         return overview.layout
-    elif pathname == "/demographics":
-        return demographics.layout
-    elif pathname == "/branches": # เพิ่มส่วนนี้
+    elif pathname == "/member":
+        return member.layout
+    elif pathname == "/branches": 
         return branches.layout
+    elif pathname == "/address": 
+        return address.layout
     elif pathname == "/performance":
         return performance.layout
 
@@ -67,8 +70,8 @@ def render_page_content(pathname):
 # Callbacks ของแต่ละ Page
 if hasattr(overview, 'register_callbacks'):
     overview.register_callbacks(app)
-if hasattr(demographics, 'register_callbacks'):
-    demographics.register_callbacks(app)
+if hasattr(member, 'register_callbacks'):
+    member.register_callbacks(app)
 
 if __name__ == "__main__":
     app.run(
