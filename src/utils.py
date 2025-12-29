@@ -75,3 +75,56 @@ if __name__ == "__main__":
     for dob, description in test_cases:
         age = calculate_age_from_dob(dob)
         print(f"{description:25} | Input: {str(dob):15} | อายุ: {age}")
+        
+        
+    
+# def apply_layout(fig, title, legend_pos="top", height=420):
+#     fig.update_layout(
+#         title={
+#             "text": f"<b>{title}</b>",
+#             "x": 0.02,
+#             "xanchor": "left",
+#             "font": dict(size=16)
+#         },
+#         height=height,
+#         font=dict(family="Sarabun, sans-serif", size=12),
+#         plot_bgcolor="rgba(255,255,255,0)",
+#         paper_bgcolor="rgba(255,255,255,0)",
+#         hovermode="closest",
+#         margin=dict(
+#             l=60,
+#             r=60 if legend_pos in ["top", "none"] else 120,
+#             t=90,
+#             b=50
+#         )
+#     )
+
+#     if legend_pos == "top":
+#         fig.update_layout(
+#             showlegend=True,
+#             legend=dict(
+#                 orientation="h",
+#                 yanchor="bottom",
+#                 y=1.02,
+#                 xanchor="right",
+#                 x=1
+#             )
+#         )
+#     elif legend_pos == "right":
+#         fig.update_layout(
+#             showlegend=True,
+#             legend=dict(
+#                 orientation="v",
+#                 yanchor="middle",
+#                 y=0.5,
+#                 xanchor="left",
+#                 x=1.02
+#             )
+#         )
+#     else:
+#         fig.update_layout(showlegend=False)
+
+#     fig.update_xaxes(showgrid=False)
+#     fig.update_yaxes(showgrid=True, gridcolor='rgba(0,0,0,0.06)')
+
+#     return fig
