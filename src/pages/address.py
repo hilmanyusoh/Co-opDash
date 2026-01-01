@@ -37,61 +37,47 @@ def get_processed_data():
 # ==================================================
 def apply_layout(fig, title, legend_pos="none"):
     fig.update_layout(
-        title=f"<b>{title}</b>",
-        height=340,  # 🔴 ล็อกความสูงกราฟ
-        font=dict(family="Sarabun, sans-serif"),
-        plot_bgcolor="rgba(245, 247, 250, 0.4)",
-        paper_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=40, r=40, t=80, b=40),
-        hovermode="closest",
+        title={
+            'text': f"<b>{title}</b>",
+            'font': {'size': 18, 'color': '#0f172a', 'family': 'Sarabun, sans-serif'},
+            'x': 0.02,
+            'xanchor': 'left'
+        },
+        plot_bgcolor="rgba(255, 255, 255, 0.02)",
+        paper_bgcolor="rgba(255, 255, 255, 0)",
+        font=dict(family="Sarabun, sans-serif", size=12, color='#334155'),
+        margin=dict(t=70, b=50, l=60, r=40),
+        hoverlabel=dict(
+            bgcolor="rgba(15, 23, 42, 0.95)",
+            font_size=13,
+            font_family="Sarabun, sans-serif",
+            font_color="white",
+            bordercolor="rgba(148, 163, 184, 0.3)"
+        )
     )
-
-    if legend_pos == "top":
-        fig.update_layout(
-            showlegend=True,
-            legend=dict(
-                orientation="h",
-                yanchor="bottom",
-                y=1.05,
-                xanchor="center",
-                x=0.5,
-            ),
-        )
-    elif legend_pos == "right":
-        fig.update_layout(
-            showlegend=True,
-            legend=dict(
-                orientation="v",
-                yanchor="middle",
-                y=0.5,
-                xanchor="left",
-                x=1.02,
-            ),
-        )
-    else:
-        fig.update_layout(showlegend=False)
-
-    fig.update_xaxes(showgrid=False)
-    fig.update_yaxes(showgrid=True, gridcolor="rgba(0,0,0,0.05)")
     return fig
 
-
+    
 # ==================================================
 # 3. Charts (Geo)
 # ==================================================
 
-# 1) Sunburst: Province > District
+# 1) Sunburst: Province 
 def chart_geo_hierarchy(df):
     top_5_prov = df['province_name'].value_counts().nlargest(5).index
     sub_df = df[df['province_name'].isin(top_5_prov)]
 
-    fig = px.sunburst(
+    fig = px.icicle(
         sub_df,
-        path=['province_name', 'district_area'],
+        path=[px.Constant("Top 5 จังหวัด"), 'province_name', 'district_area'],
+        values=None, # หรือใส่ 'Income_Clean' ถ้าต้องการดูขนาดตามรายได้
         color='province_name',
-        color_discrete_sequence=px.colors.qualitative.Pastel,
+        color_discrete_sequence=px.colors.qualitative.Pastel
     )
-    return apply_layout(fig, "1. สัดส่วนพื้นที่แยกตามจังหวัดและอำเภอ (Top 5)")
+    
+    fig.update_traces(marker_line_width=2)
+    
+    return apply_layout(fig, "1. โครงสร้างพื้นที่สมาชิก (Icicle Chart)")  
 
 
 # 2) Top 10 Subdistricts

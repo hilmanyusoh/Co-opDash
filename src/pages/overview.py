@@ -22,7 +22,7 @@ def preprocess_data(df):
 # ==================================================
 # Chart Helper
 # ==================================================
-def chart_style(fig, title, height=380):
+def apply_layout(fig, title, height=380):
     fig.update_layout(
         title={
             'text': f"<b>{title}</b>",
@@ -90,7 +90,7 @@ def chart_gender_pie(df):
     )
     
     
-    return chart_style(fig, "สัดส่วนสมาชิกแยกตามเพศ", 420)
+    return apply_layout(fig, "สัดส่วนสมาชิกแยกตามเพศ", 420)
 
 def chart_branch_bar(df):
     branch_col = "branch_no" if "branch_no" in df.columns else "branch_code"
@@ -171,7 +171,7 @@ def chart_branch_bar(df):
         tickfont=dict(size=12, color='#334155')
     )
     
-    return chart_style(fig, "จำนวนสมาชิกแยกรายสาขา", 420)
+    return apply_layout(fig, "จำนวนสมาชิกแยกรายสาขา", 420)
 
 def chart_province_bar(df):
     prov_col = "province_name" if "province_name" in df.columns else "province"
@@ -248,7 +248,7 @@ def chart_province_bar(df):
         tickfont=dict(size=12, color='#0f172a', family='Sarabun')
     )
     
-    return chart_style(fig, "Top 8 จังหวัดที่มีสมาชิกสูงสุด", 420)
+    return apply_layout(fig, "Top 8 จังหวัดที่มีสมาชิกสูงสุด", 420)
 
 def chart_income_funnel(df):
     career_col = "career_name" if "career_name" in df.columns else "career"
@@ -275,7 +275,7 @@ def chart_income_funnel(df):
         showlegend=False # ใน Funnel ชื่อจะอยู่ที่แกน Y อยู่แล้ว
     )
 
-    return chart_style(fig, "Top 8 อันดับรายได้เฉลี่ยตามอาชีพ", 420)
+    return apply_layout(fig, "Top 8 อันดับรายได้เฉลี่ยตามอาชีพ", 420)
 
 # ==================================================
 # Layout

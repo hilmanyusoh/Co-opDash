@@ -36,7 +36,7 @@ def process_member(df):
 # ==================================================
 # Chart Helpers
 # ==================================================
-def legend_style(fig, title, height=420):
+def apply_layout(fig, title, height=380):
     fig.update_layout(
         title={
             'text': f"<b>{title}</b>",
@@ -193,7 +193,7 @@ def chart_gender_career(df):
     )
     
     # เรียกใช้ Style หลักที่คุม Legend ขวาและ Title
-    return legend_style(fig, "2. สัดส่วนเพศแยกตามกลุ่มอาชีพ (Top 10)")
+    return apply_layout(fig, "2. สัดส่วนเพศแยกตามกลุ่มอาชีพ (Top 10)")
 
 def chart_income_pie(df):
     if "Income_Level" not in df.columns: return go.Figure()
@@ -225,7 +225,7 @@ def chart_income_pie(df):
         xref="paper", yref="paper"
     )
     
-    return legend_style(fig, "3. สัดส่วนสมาชิกแยกตามระดับรายได้")
+    return apply_layout(fig, "3. สัดส่วนสมาชิกแยกตามระดับรายได้")
 
 def chart_gen_area(df):
     prov_col = "province_name" if "province_name" in df.columns else "province"
@@ -265,7 +265,7 @@ def chart_gen_area(df):
         tickfont=dict(size=12, color='#334155')
     )
     
-    return legend_style(fig, "4. การกระจายกลุ่ม Generation ในจังหวัดหลัก", 450)
+    return apply_layout(fig, "4. การกระจายกลุ่ม Generation ในจังหวัดหลัก", 450)
 
 def chart_income_career(df):
     career_col = "career_name" if "career_name" in df.columns else "career"
@@ -313,7 +313,7 @@ def chart_income_career(df):
         tickfont=dict(size=12, color='#0f172a')
     )
     
-    return legend_style(fig, "5. อาชีพที่มีรายได้เฉลี่ยสูงสุด", 450)
+    return apply_layout(fig, "5. อาชีพที่มีรายได้เฉลี่ยสูงสุด", 450)
 
 # ==================================================
 # Layout

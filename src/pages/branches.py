@@ -48,42 +48,27 @@ def get_processed_data():
 # ==================================================
 # 2. Layout Helper (มาตรฐานเดียวกันทุกกราฟ)
 # ==================================================
-def apply_layout(fig, title, legend_pos="top"):
+def apply_layout(fig, title, height=380):
     fig.update_layout(
-        title=f"<b>{title}</b>",
-        height=340,  # 🔴 ล็อกความสูงกราฟ
-        font=dict(family="Sarabun, sans-serif"),
-        plot_bgcolor="rgba(245, 247, 250, 0.4)",
-        paper_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=50, r=50, t=80, b=50),
-        hovermode="x unified",
+        title={
+            'text': f"<b>{title}</b>",
+            'font': {'size': 18, 'color': '#0f172a', 'family': 'Sarabun, sans-serif'},
+            'x': 0.02,
+            'xanchor': 'left'
+        },
+        plot_bgcolor="rgba(255, 255, 255, 0.02)",
+        paper_bgcolor="rgba(255, 255, 255, 0)",
+        height=height,
+        font=dict(family="Sarabun, sans-serif", size=12, color='#334155'),
+        margin=dict(t=70, b=50, l=60, r=40),
+        hoverlabel=dict(
+            bgcolor="rgba(15, 23, 42, 0.95)",
+            font_size=13,
+            font_family="Sarabun, sans-serif",
+            font_color="white",
+            bordercolor="rgba(148, 163, 184, 0.3)"
+        )
     )
-
-    if legend_pos == "top":
-        fig.update_layout(
-            showlegend=True,
-            legend=dict(
-                orientation="h",
-                yanchor="bottom",
-                y=1.05,
-                xanchor="center",
-                x=0.5,
-            ),
-        )
-    elif legend_pos == "right":
-        fig.update_layout(
-            showlegend=True,
-            legend=dict(
-                orientation="v",
-                yanchor="middle",
-                y=0.5,
-                xanchor="left",
-                x=1.02,
-            ),
-        )
-
-    fig.update_xaxes(showgrid=False)
-    fig.update_yaxes(showgrid=True, gridcolor="rgba(0,0,0,0.05)")
     return fig
 
 
