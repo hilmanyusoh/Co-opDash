@@ -9,3 +9,45 @@ body {
     font-variation-settings: "wdth" 100;
 }
 
+/* ===== Sidebar Base ===== */
+#sidebar,
+.sidebar {
+    font-family: "Sarabun", sans-serif;
+    font-size: 14px; /* ค่า base */
+}
+
+/* ===== NavLink (เมนูหลัก) ===== */
+#sidebar .nav-link {
+    font-size: 14px !important;
+    padding: 10px 14px;
+    line-height: 1.4;
+}
+
+/* ===== Accordion title (คำว่า "สมาชิก") ===== */
+#sidebar .accordion-button {
+    font-size: 14px !important;
+    font-weight: 500;
+    padding: 10px 14px;
+}
+
+/* ===== Sub menu (เมนูย่อยใน Accordion) ===== */
+#sidebar .accordion-body .nav-link {
+    font-size: 13px !important;
+    padding: 8px 14px;
+}
+
+/* ===== Icon ใน Sidebar ===== */
+#sidebar i {
+    font-size: 14px;
+}
+
+/* ===== Header (I-Corp Dash) ===== */
+#sidebar h4 {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+/* ===== Footer ===== */
+#sidebar small {
+    font-size: 11px;
+}
