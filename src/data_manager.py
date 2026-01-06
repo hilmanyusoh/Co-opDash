@@ -61,13 +61,20 @@ def load_data() -> pd.DataFrame:
             c.career_name, 
             b.branch_no, 
             g.gender_name,
-            p.province_name
+            p.province_name,
+            am.net_yearly_income,
+            am.yearly_debt_payments,
+            am.credit_limit,
+            am.credit_limit_used_pct
+            
+
         FROM members m
-        LEFT JOIN careers c ON m.career_id = c.career_id
-        LEFT JOIN branches b ON m.branch_id = b.branch_id
-        LEFT JOIN gender g ON m.gender_id = g.gender_id
+        LEFT JOIN careers c   ON m.career_id = c.career_id
+        LEFT JOIN branches b  ON m.branch_id = b.branch_id
+        LEFT JOIN gender g    ON m.gender_id = g.gender_id
         LEFT JOIN addresses a ON m.member_id = a.member_id  
         LEFT JOIN provinces p ON a.province_id = p.province_id
+        LEFT JOIN vw_member_amount am ON m.member_id = am.member_id
         """
 
         with engine.connect() as conn:

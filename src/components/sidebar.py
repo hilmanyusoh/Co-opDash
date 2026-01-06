@@ -69,7 +69,11 @@ def render_sidebar():
                                 render_sub_nav("ข้อมูลสาขา", "/branches", "fa-building-columns"),
                                 render_sub_nav("ข้อมูลเชิงพื้นที่", "/address", "fa-map-location-dot"),
 
+                                # ⭐ เพิ่มเมนูข้อมูลทางการเงิน
+                                render_sub_nav("ข้อมูลทางการเงิน","/amount",
+                                    "fa-sack-dollar"),
                             ],
+
                             vertical=True, 
                             pills=True
                         ),

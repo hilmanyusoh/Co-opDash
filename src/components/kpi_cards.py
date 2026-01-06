@@ -194,3 +194,12 @@ def render_performance_kpis(df: pd.DataFrame) -> dbc.Row:
         dbc.Col(render_kpi_card("ประมาณการรายได้สะสม", f"{forecasted_income / 1_000_000:.1f}M", "บาท (Forecast)", "fa-coins", "purple"), lg=3, md=6),
         dbc.Col(render_kpi_card("อัตราสมาชิกใหม่", f"{int(avg_growth_per_month)}", "คน / เดือน", "fa-user-plus", "info"), lg=3, md=6),
     ], className="g-3 mb-4")
+    
+# ==================================================
+# 7. KPI Amount (Financial – ไม่เกี่ยวกับ Credit Score)
+# ==================================================
+def render_amount_kpis(df: pd.DataFrame) -> dbc.Row:
+    if df.empty:
+        return dbc.Alert("ไม่พบข้อมูลทางการเงิน", color="warning", className="text-center")
+
+ 

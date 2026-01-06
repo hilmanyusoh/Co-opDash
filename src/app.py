@@ -11,6 +11,7 @@ from .pages import member
 from .pages import branches 
 from .pages import address
 from .pages import performance
+from .pages import amount
 
 load_dotenv()  
 
@@ -46,16 +47,25 @@ app.layout = html.Div(
 # Callback หลัก: การจัดการ Routing
 @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
 def render_page_content(pathname):
+
     if pathname == "/" or pathname == "/overview":
         return overview.layout
+
     elif pathname == "/member":
         return member.layout
-    elif pathname == "/branches": 
+
+    elif pathname == "/branches":
         return branches.layout
-    elif pathname == "/address": 
+
+    elif pathname == "/address":
         return address.layout
+
+    elif pathname == "/amount":   # ⭐ เพิ่มตรงนี้
+        return amount.layout
+
     elif pathname == "/performance":
         return performance.layout
+
 
     # 3. หน้า 404 (เปลี่ยนจาก Jumbotron เป็น Div)
     return html.Div(
