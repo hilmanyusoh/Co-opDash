@@ -202,7 +202,7 @@ def chart_income_career(df):
     return apply_layout(fig)
 
 # ==================================================
-# Card Component (❌ ไม่กำหนด fontSize)
+# Card Component 
 # ==================================================
 def chart_card(fig, title):
     return dbc.Card(

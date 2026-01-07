@@ -60,7 +60,7 @@ def render_page_content(pathname):
     elif pathname == "/address":
         return address.layout
 
-    elif pathname == "/amount":   # ⭐ เพิ่มตรงนี้
+    elif pathname == "/amount":   
         return amount.layout
 
     elif pathname == "/performance":

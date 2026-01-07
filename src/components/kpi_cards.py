@@ -196,10 +196,71 @@ def render_performance_kpis(df: pd.DataFrame) -> dbc.Row:
     ], className="g-3 mb-4")
     
 # ==================================================
-# 7. KPI Amount (Financial – ไม่เกี่ยวกับ Credit Score)
+# 7. KPI Amount (Financial 
 # ==================================================
-def render_amount_kpis(df: pd.DataFrame) -> dbc.Row:
-    if df.empty:
-        return dbc.Alert("ไม่พบข้อมูลทางการเงิน", color="warning", className="text-center")
+def render_amount_kpis(df: pd.DataFrame) -> dbc.Row:   
+    
+    if df.empty or "net_yearly_income" not in df.columns:
+        return dbc.Alert("ไม่พบข้อมูลทางการเงินสำหรับการคำนวณ", color="info", className="text-center")
 
- 
+    # 1. สภาพคล่องสมาชิก (เงินเหลือหลังหักหนี้)
+    total_disposable = (df["net_yearly_income"] - df["yearly_debt_payments"]).sum()
+
+    # 2. ระดับความเปราะบาง (หนี้ต่อรายได้ทั้งระบบ)
+    total_debt = df["yearly_debt_payments"].sum()
+    total_income = df["net_yearly_income"].sum()
+    risk_index = (total_debt / total_income * 100) if total_income > 0 else 0
+    
+    # สีบ่งบอกสุขภาพทางการเงิน
+    risk_color = "success" if risk_index < 35 else "orange" if risk_index < 45 else "red"
+
+    # 3. พลังสินเชื่อคงเหลือ (วงเงินที่ยังไม่ได้ใช้)
+    available_credit = (df["credit_limit"] * (1 - (df["credit_limit_used_pct"] / 100))).sum()
+
+    # 4. มูลค่ากลุ่มเกรด Premium (รายได้รวมของกลุ่มประวัติดี)
+    df_temp = df.copy()
+    df_temp['ind_dti'] = (df_temp['yearly_debt_payments'] / df_temp['net_yearly_income']) * 100
+    # เงื่อนไข: ใช้วงเงินน้อย (<30%) และ หนี้ต่ำ (<25%)
+    premium_val = df_temp[
+        (df_temp["credit_limit_used_pct"] < 30) & 
+        (df_temp["ind_dti"] < 25)
+    ]["net_yearly_income"].sum()
+
+    def format_val(val):
+        if val >= 1_000_000:
+            return f"฿{val / 1_000_000:.2f}M"
+        return f"฿{val:,.0f}"
+
+    return dbc.Row([
+    dbc.Col(render_kpi_card(
+        "เงินเหลือสุทธิของสมาชิก",
+        format_val(total_disposable),
+        "รายได้เหลือหลังชำระหนี้ทั้งหมด",
+        "fa-sack-dollar",
+        "red    "
+    ), lg=3, md=6),
+    
+    dbc.Col(render_kpi_card(
+        "ระดับความเสี่ยงทางการเงิน",
+        f"{risk_index:.1f}%",
+        "สัดส่วนหนี้ของสมาชิกทั้งหมด",
+        "fa-heart-pulse",
+        risk_color
+    ), lg=3, md=6),
+    
+    dbc.Col(render_kpi_card(
+        "วงเงินสินเชื่อที่ยังใช้ได้",
+        format_val(available_credit),
+        "วงเงินที่สมาชิกยังไม่ได้ใช้",
+        "fa-bolt-lightning",
+        "primary"
+    ), lg=3, md=6),
+    
+    dbc.Col(render_kpi_card(
+        "มูลค่าสมาชิกคุณภาพสูง",
+        format_val(premium_val),
+        "สมาชิกที่ใช้หนี้น้อยและวินัยดี",
+        "fa-crown",
+        "purple"
+    ), lg=3, md=6),
+], className="g-3 mb-4")
