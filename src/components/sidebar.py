@@ -92,7 +92,7 @@ def render_sidebar():
             ),
 
             # 4. Performance (ไม่มีเมนูย่อย)
-            render_single_nav("Performance", "/performance", "fa-chart-line"),
+            # render_single_nav("Performance", "/performance", "fa-chart-line"),
 
             # Footer
             html.Div(

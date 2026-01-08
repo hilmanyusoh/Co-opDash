@@ -49,35 +49,6 @@ def get_risk_category(debt_ratio: float) -> str:
         return "สูง"
 
 # ==================================================
-# Chart Helper
-# ==================================================
-def apply_chart_layout(fig, title, height=CHART_HEIGHT):
-    """Apply consistent layout to charts."""
-    fig.update_layout(
-        title={
-            "text": f"<b>{title}</b>",
-            "x": 0.02,
-            "xanchor": "left",
-            "font": {"size": 16, "color": "#1e293b"}
-        },
-        height=height,
-        plot_bgcolor="rgba(248, 250, 252, 0.5)",
-        paper_bgcolor=CHART_BG,
-        font=dict(
-            family=FONT_FAMILY,
-            color="#334155",
-        ),
-        margin=dict(t=50, b=40, l=50, r=30),
-        hoverlabel=dict(
-            bgcolor=HOVER_BG,
-            font_family=FONT_FAMILY,
-            font_color="white",
-            bordercolor="rgba(148, 163, 184, 0.3)",
-        ),
-    )
-    return fig
-
-# ==================================================
 # Enhanced Charts
 # ==================================================
 
@@ -154,12 +125,15 @@ def chart_financial_risk_gauge(df: pd.DataFrame) -> go.Figure:
     )
     return fig
 
+
 def chart_liquidity_by_gen(df: pd.DataFrame) -> go.Figure:
+    """Enhanced grouped bar with animations and better styling."""
     df_plot = calculate_financial_metrics(df)
 
+    # แก้ไขบรรทัดนี้: เพิ่ม observed=False
     summary = (
         df_plot
-        .groupby("Age_Group")[["disposable", "available_credit"]]
+        .groupby("Age_Group", observed=False)[["disposable", "available_credit"]]
         .mean()
         .reset_index()
     )
@@ -197,20 +171,26 @@ def chart_liquidity_by_gen(df: pd.DataFrame) -> go.Figure:
     ))
 
     fig.update_layout(
+        title={
+            "text": "<b>สภาพคล่องตามช่วงอายุ</b>",
+            "x": 0.02,
+            "xanchor": "left",
+            "font": {"size": 16, "color": "#1e293b"}
+        },
         barmode='group',
         height=CHART_HEIGHT,
         margin=dict(t=50, b=60, l=70, r=40),
         legend=dict(
-        orientation="h",
-        yanchor="bottom",
-        y=1.12,
-        xanchor="center",
-        x=0.5,
-        bgcolor="rgba(255, 255, 255, 0.7)",
-        bordercolor="rgba(148, 163, 184, 0.3)",
-        borderwidth=1,
-        font=dict(size=12, family=FONT_FAMILY, color='#475569')
-    ),
+            orientation="h",
+            yanchor="bottom",
+            y=1.12,
+            xanchor="center",
+            x=0.5,
+            bgcolor="rgba(255, 255, 255, 0.7)",
+            bordercolor="rgba(148, 163, 184, 0.3)",
+            borderwidth=1,
+            font=dict(size=12, family=FONT_FAMILY, color='#475569')
+        ),
         font=dict(family=FONT_FAMILY, size=12),
         paper_bgcolor=CHART_BG,
         plot_bgcolor="rgba(248, 250, 252, 0.5)",
@@ -231,14 +211,31 @@ def chart_liquidity_by_gen(df: pd.DataFrame) -> go.Figure:
         )
     )
     
+    return fig
+
+
 # def chart_premium_segment_treemap(df: pd.DataFrame) -> go.Figure:
-#     """Enhanced treemap with better colors and interactivity."""
+#     """Enhanced treemap for premium segment analysis."""
 #     df_temp = calculate_financial_metrics(df)
 
 #     premium_df = df_temp[
 #         (df_temp["credit_limit_used_pct"] < 30) &
 #         (df_temp["ind_dti"] < 25)
 #     ]
+
+#     if premium_df.empty:
+#         fig = go.Figure()
+#         fig.add_annotation(
+#             text="ไม่มีข้อมูลกลุ่ม Premium Segment",
+#             xref="paper", yref="paper",
+#             x=0.5, y=0.5, showarrow=False,
+#             font=dict(size=16, color="#64748b")
+#         )
+#         fig.update_layout(
+#             height=450,
+#             paper_bgcolor=CHART_BG,
+#         )
+#         return fig
 
 #     summary = (
 #         premium_df
@@ -247,7 +244,6 @@ def chart_liquidity_by_gen(df: pd.DataFrame) -> go.Figure:
 #         .reset_index(name="count")
 #     )
 
-#     # Add percentage
 #     total = summary["count"].sum()
 #     summary["percentage"] = (summary["count"] / total * 100).round(2)
 
@@ -292,16 +288,14 @@ def chart_liquidity_by_gen(df: pd.DataFrame) -> go.Figure:
 
 
 # def chart_debt_income_scatter(df: pd.DataFrame) -> go.Figure:
-#     """New: Debt-to-Income scatter plot with risk zones."""
+#     """Debt-to-Income scatter plot with risk zones."""
 #     df_plot = calculate_financial_metrics(df)
     
-#     # Sample if too many points
 #     if len(df_plot) > 1000:
 #         df_plot = df_plot.sample(1000, random_state=42)
     
 #     fig = go.Figure()
 
-#     # Add risk zone shapes
 #     fig.add_shape(
 #         type="rect",
 #         x0=0, y0=0, x1=100, y1=35,
@@ -327,8 +321,7 @@ def chart_liquidity_by_gen(df: pd.DataFrame) -> go.Figure:
 #         line_width=0,
 #     )
 
-#     # Add scatter points by age group
-#     for age_group in df_plot["Age_Group"].unique():
+#     for age_group in sorted(df_plot["Age_Group"].unique()):
 #         group_data = df_plot[df_plot["Age_Group"] == age_group]
         
 #         fig.add_trace(go.Scatter(
@@ -349,7 +342,6 @@ def chart_liquidity_by_gen(df: pd.DataFrame) -> go.Figure:
 #             )
 #         ))
 
-#     # Add reference lines
 #     fig.add_hline(
 #         y=35, line_dash="dash",
 #         line_color=COLOR_SCHEME['risk_medium'],
@@ -364,6 +356,12 @@ def chart_liquidity_by_gen(df: pd.DataFrame) -> go.Figure:
 #     )
 
 #     fig.update_layout(
+#         title={
+#             "text": "<b>การกระจายตัวของความเสี่ยง</b>",
+#             "x": 0.02,
+#             "xanchor": "left",
+#             "font": {"size": 16, "color": "#1e293b"}
+#         },
 #         height=400,
 #         margin=dict(t=50, b=50, l=60, r=30),
 #         xaxis=dict(
@@ -398,7 +396,7 @@ def chart_liquidity_by_gen(df: pd.DataFrame) -> go.Figure:
 
 
 # def chart_income_debt_comparison(df: pd.DataFrame) -> go.Figure:
-#     """New: Income vs Debt comparison by career."""
+#     """Income vs Debt comparison by career."""
 #     df_plot = calculate_financial_metrics(df)
     
 #     summary = (
@@ -441,6 +439,12 @@ def chart_liquidity_by_gen(df: pd.DataFrame) -> go.Figure:
 #     ))
 
 #     fig.update_layout(
+#         title={
+#             "text": "<b>รายได้ vs หนี้ (10 อาชีพสูงสุด)</b>",
+#             "x": 0.02,
+#             "xanchor": "left",
+#             "font": {"size": 16, "color": "#1e293b"}
+#         },
 #         barmode='group',
 #         height=420,
 #         margin=dict(t=50, b=50, l=150, r=100),
@@ -471,8 +475,6 @@ def chart_liquidity_by_gen(df: pd.DataFrame) -> go.Figure:
     
 #     return fig
 
-    return apply_chart_layout(fig, "สภาพคล่องตามช่วงอายุ")
-
 
 # ==================================================
 # Layout
@@ -481,27 +483,25 @@ def create_amount_layout():
     df = load_data()
     if df.empty:
         return dbc.Container(
-            dbc.Alert("ไม่พบข้อมูล", color="warning", className="mt-5")
+            dbc.Alert("ไม่พบข้อมูล", color="warning", className="mt-5"),
+            fluid=True
         )
-    
-    df_metrics = calculate_financial_metrics(df)
 
     card = lambda content, title=None: dbc.Card(
-    dbc.CardBody(
-        [
-            html.H6(
-                title,
-                className="fw-bold mb-3",
-                style={"color": "#1e293b", "fontSize": "15px"}
-            ) if title else None,
-
-            content
-        ],
-        style={"padding": "18px"},
-    ),
-    className="shadow-sm rounded-3 border-0 mb-3",
-    style={"height": "100%"},
-)
+        dbc.CardBody(
+            [
+                html.H6(
+                    title,
+                    className="fw-bold mb-3",
+                    style={"color": "#1e293b", "fontSize": "15px"}
+                ) if title else None,
+                content
+            ],
+            style={"padding": "18px"},
+        ),
+        className="shadow-sm rounded-3 border-0 mb-3",
+        style={"height": "100%"},
+    )
 
     return dbc.Container(
         fluid=True,
@@ -510,7 +510,6 @@ def create_amount_layout():
             "maxWidth": "1400px",
             "margin": "0 auto",
         },
-
         children=[
             html.H3(
                 "วิเคราะห์สุขภาพทางการเงิน",
@@ -540,18 +539,16 @@ def create_amount_layout():
                     ),
                     xs=12, lg=8
                 ),
-                
-            ], className="g-3"),
-            # # ===== Row 2 =====
+            ], className="g-3 mb-3"),
+
             # dbc.Row([
             #     dbc.Col(
             #         card(
             #             dcc.Graph(
             #                 figure=chart_debt_income_scatter(df),
-            #                 config={"displayModeBar": False},
+            #                 config={"displayModeBar": False, "responsive": True},
             #                 style={"height": "400px"},
-            #             ),
-            #             "Risk Distribution"
+            #             )
             #         ),
             #         lg=6, md=12,
             #     ),
@@ -559,22 +556,20 @@ def create_amount_layout():
             #         card(
             #             dcc.Graph(
             #                 figure=chart_income_debt_comparison(df),
-            #                 config={"displayModeBar": False},
+            #                 config={"displayModeBar": False, "responsive": True},
             #                 style={"height": "420px"},
-            #             ),
-            #             "Income vs Debt (Top 10 Career)"
+            #             )
             #         ),
             #         lg=6, md=12,
             #     ),
             # ], className="g-3 mb-3"),
 
-            # ===== Row 3 =====
             # dbc.Row([
             #     dbc.Col(
             #         card(
             #             dcc.Graph(
             #                 figure=chart_premium_segment_treemap(df),
-            #                 config={"displayModeBar": False},
+            #                 config={"displayModeBar": False, "responsive": True},
             #                 style={"height": "450px"},
             #             ),
             #             "Premium Segment"
