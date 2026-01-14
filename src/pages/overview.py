@@ -170,92 +170,109 @@ def chart_branch_bar(df):
 
 def chart_province_bar(df):
     prov_col = "province_name" if "province_name" in df.columns else "province"
-    counts = df[prov_col].value_counts().head(8).sort_values()
+    counts = (
+        df[prov_col]
+        .value_counts()
+        .head(8)
+        .sort_values()  # เรียงจากน้อย → มาก (สวยใน horizontal)
+    )
 
-    fig = go.Figure()
-
-    for province, value in counts.items():
-        fig.add_trace(
-            go.Bar(
-                y=[province],
-                x=[value],
-                orientation="h",
-                name=province,
-                text=[value],
-                textposition="outside",
-                marker=dict(
-                    line=dict(color="#ffffff", width=2),
-                    opacity=0.9,
-                ),
-                hovertemplate=(
-                    f"<b>{province}</b><br>"
-                    "สมาชิก: %{x} คน<extra></extra>"
-                ),
-            )
+    fig = go.Figure(
+        go.Bar(
+            y=counts.index,
+            x=counts.values,
+            orientation="h",
+            text=[f"{v:,} คน" for v in counts.values],
+            textposition="inside",
+            insidetextanchor="middle",
+            marker=dict(
+                color=counts.values,  # ใช้ value ทำ gradient
+                colorscale=[
+                    [0.0, "#e0f2fe"],
+                    [0.5, "#60a5fa"],
+                    [1.0, "#1d4ed8"],
+                ],
+                line=dict(color="white", width=2),
+            ),
+            hovertemplate=(
+                "<b>%{y}</b><br>"
+                "จำนวนสมาชิก: %{x:,} คน"
+                "<extra></extra>"
+            ),
         )
+    )
 
     fig.update_layout(
-        showlegend=True,
-        legend=dict(
-            title="<b>จังหวัด</b>",
-            orientation="h",
-            xanchor="center",
-            yanchor="top",
-            x=0.5,
-            y=-0.2,
-            bgcolor="rgba(255, 255, 255, 0.7)",
-            bordercolor="rgba(148, 163, 184, 0.3)",
-            borderwidth=1,
-        ),
-        margin=dict(r=30, l=100, t=50, b=85),
+        showlegend=False,  # ❌ ไม่ใช้ legend (ไม่จำเป็น)
+        margin=dict(l=120, r=40, t=50, b=40),
         paper_bgcolor="rgba(255, 255, 255, 0)",
-        plot_bgcolor="rgba(248, 250, 252, 0.3)",
+        plot_bgcolor="rgba(248, 250, 252, 0.6)",
+        xaxis=dict(
+            title="<b>จำนวนสมาชิก</b>",
+            showgrid=True,
+            gridcolor="rgba(203, 213, 225, 0.4)",
+            zeroline=False,
+        ),
+        yaxis=dict(
+            title="",
+            showgrid=False,
+        ),
     )
-
-    fig.update_xaxes(
-        title="<b>จำนวนสมาชิก</b>",
-        showgrid=True,
-        gridcolor="rgba(203, 213, 225, 0.4)",
-    )
-    fig.update_yaxes(title="<b>จังหวัด</b>", showgrid=False)
 
     return apply_layout(fig, "Top 8 จังหวัดที่มีสมาชิกสูงสุด")
 
-def chart_income_funnel(df):
-    career_col = "career_name" if "career_name" in df.columns else "career"
 
-    income_avg = (
-        df.groupby(career_col)["Income_Clean"]
-        .mean()
-        .sort_values(ascending=True)
+def chart_income_funnel(df):
+    branch_col = "branch_no" if "branch_no" in df.columns else "branch_code"
+
+    # 1. เตรียมข้อมูล
+    income_branch = (
+        df.groupby(branch_col, observed=False)["Income_Clean"]
+        .sum()
+        .sort_values(ascending=False)
         .head(8)
         .reset_index()
     )
+    income_branch["Branch_Label"] = income_branch[branch_col].apply(lambda x: f"สาขา {x}")
 
+    # 2. สร้างชุดสีไล่เฉด (Gradient) จากเข้มไปอ่อนด้วยตัวเอง
+    # คุณสามารถเลือกโทนสีที่ชอบได้ เช่น Blues, Viridis, หรือ Greens
+    custom_colors = px.colors.sample_colorscale("Blues", [i/7 for i in range(8)], low=0.4, high=0.9)
+    custom_colors.reverse() # ให้ค่ามากสีเข้มอยู่บน
+
+    # 3. สร้างกราฟ Funnel
     fig = px.funnel(
-        income_avg,
-        y=career_col,
+        income_branch,
+        y="Branch_Label",
         x="Income_Clean",
-        color=career_col,
-        color_discrete_sequence=px.colors.qualitative.Prism,
+        color="Branch_Label", # ใช้คอลัมน์นี้เพื่อแยกสี
+        color_discrete_sequence=custom_colors, # ใส่ชุดสีที่เราสร้างไว้
         labels={
-            "Income_Clean": "รายได้เฉลี่ย",
-            career_col: "อาชีพ",
+            "Income_Clean": "รายได้รวม",
+            "Branch_Label": "สาขา",
         },
     )
 
+    # 4. ปรับแต่ง Traces
     fig.update_traces(
         texttemplate="฿%{value:,.0f}",
-        marker=dict(line=dict(color="white", width=1.5)),
+        textposition="inside",
+        marker=dict(line=dict(color="white", width=2)),
         opacity=0.9,
+        connector=dict(fillcolor="(203, 213, 225, 0.2)"),
+        hovertemplate="<b>%{y}</b><br>รายได้รวม: ฿%{x:,.2f}<extra></extra>"
     )
 
+    # 5. ปรับ Layout
     fig.update_layout(
-        margin=dict(r=30, t=50, b=40, l=120),
-        showlegend=False,
+        margin=dict(r=40, t=50, b=20, l=120),
+        showlegend=False, # ปิด Legend เพราะชื่อสาขาอยู่ที่แกน Y แล้ว
+        font=dict(family="Sarabun, sans-serif", size=13),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
     )
 
-    return apply_layout(fig, "Top 8 อันดับรายได้เฉลี่ยตามอาชีพ")
+    return apply_layout(fig, "รายได้รวมสูงสุดแยกตามสาขา")
 
 # ==================================================
 # Layout
@@ -265,7 +282,7 @@ def create_overview_layout():
 
     if df.empty:
         return dbc.Container(
-            dbc.Alert("ไม่พบข้อมูล", color="warning", className="mt-5")
+            dbc.Alert("ไม่พบข้อมูล", color="warning", classNrgbaame="mt-5")
         )
 
     card = lambda fig: dbc.Card(

@@ -68,8 +68,6 @@ def render_sidebar():
                                 render_sub_nav("ข้อมูลประชากร", "/member", "fa-user-group"),
                                 render_sub_nav("ข้อมูลสาขา", "/branches", "fa-building-columns"),
                                 render_sub_nav("ข้อมูลเชิงพื้นที่", "/address", "fa-map-location-dot"),
-
-                                # ⭐ เพิ่มเมนูข้อมูลทางการเงิน
                                 render_sub_nav("ข้อมูลทางการเงิน","/amount",
                                     "fa-sack-dollar"),
                             ],
@@ -95,28 +93,28 @@ def render_sidebar():
             # render_single_nav("Performance", "/performance", "fa-chart-line"),
 
             # Footer
-            html.Div(
-                [
-                    html.Hr(className="my-3"),
-                    html.Small(
-                        [
-                            html.I(className="fas fa-clock me-2"),
-                            f"อัปเดต: {current_time}"
-                        ],
-                        className="text-muted text-center d-block mb-1",
-                    ),
-                    html.Small(
-                        [html.I(className="fas fa-shield-halved me-2"), "v1.2.0"],
-                        className="text-muted text-center d-block",
-                    ),
-                ],
-                style={
-                    "position": "absolute",
-                    "bottom": "15px",
-                    "left": "1rem",
-                    "right": "1rem",
-                },
-            ),
+            # html.Div(
+            #     [
+            #         html.Hr(className="my-3"),
+            #         html.Small(
+            #             [
+            #                 html.I(className="fas fa-clock me-2"),
+            #                 f"อัปเดต: {current_time}"
+            #             ],
+            #             className="text-muted text-center d-block mb-1",
+            #         ),
+            #         html.Small(
+            #             [html.I(className="fas fa-shield-halved me-2"), "v1.2.0"],
+            #             className="text-muted text-center d-block",
+            #         ),
+            #     ],
+            #     style={
+            #         "position": "absolute",
+            #         "bottom": "15px",
+            #         "left": "1rem",
+            #         "right": "1rem",
+            #     },
+            # ),
         ],
         style=SIDEBAR_STYLE,
         id="sidebar",
