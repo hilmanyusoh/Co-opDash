@@ -253,13 +253,13 @@ def chart_income_funnel(df):
         },
     )
 
-    # 4. ปรับแต่ง Traces
+    # 4. ปรับแต่ง Traces - แก้ไข fillcolor ให้ถูกต้อง
     fig.update_traces(
         texttemplate="฿%{value:,.0f}",
         textposition="inside",
         marker=dict(line=dict(color="white", width=2)),
         opacity=0.9,
-        connector=dict(fillcolor="(203, 213, 225, 0.2)"),
+        connector=dict(fillcolor="rgba(203, 213, 225, 0.2)"),  # แก้ไขจาก "(203, 213, 225, 0.2)" เป็น "rgba(...)"
         hovertemplate="<b>%{y}</b><br>รายได้รวม: ฿%{x:,.2f}<extra></extra>"
     )
 
@@ -282,7 +282,7 @@ def create_overview_layout():
 
     if df.empty:
         return dbc.Container(
-            dbc.Alert("ไม่พบข้อมูล", color="warning", classNrgbaame="mt-5")
+            dbc.Alert("ไม่พบข้อมูล", color="warning", className="mt-5")
         )
 
     card = lambda fig: dbc.Card(

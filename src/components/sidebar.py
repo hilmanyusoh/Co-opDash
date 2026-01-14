@@ -65,10 +65,10 @@ def render_sidebar():
                     dbc.AccordionItem(
                         dbc.Nav(
                             [
-                                render_sub_nav("ข้อมูลประชากร", "/member", "fa-user-group"),
+                                render_sub_nav("ข้อมูลสมาชิก", "/member", "fa-user-group"),
                                 render_sub_nav("ข้อมูลสาขา", "/branches", "fa-building-columns"),
                                 render_sub_nav("ข้อมูลเชิงพื้นที่", "/address", "fa-map-location-dot"),
-                                render_sub_nav("ข้อมูลทางการเงิน","/amount",
+                                render_sub_nav("ข้อมูลการเงิน","/amount",
                                     "fa-sack-dollar"),
                             ],
 

@@ -512,7 +512,7 @@ def create_amount_layout():
         },
         children=[
             html.H3(
-                "วิเคราะห์สุขภาพทางการเงิน",
+                "ข้อมูลการเงิน",
                 className="page-title fw-bold mb-3",
             ),
 
