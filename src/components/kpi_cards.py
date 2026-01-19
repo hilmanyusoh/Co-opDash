@@ -2,69 +2,108 @@ from dash import html
 import dash_bootstrap_components as dbc
 import pandas as pd
 from typing import Any
+from datetime import datetime
 
-#  Color Palette
-COLOR_MAP = {
-    "primary": "#007bff",   
-    "purple": "#6f42c1",    
-    "success": "#28a745",   
-    "orange": "#fd7e14",    
-    "info": "#17a2b8",      
-    "pink": "#ff69ed",
-    "red": "#ff4d4d",
-}
+from .theme import THEME
 
 # ==================================================
-# 1. Component พื้นฐาน: Single KPI Card
+# KPI Card (Theme-based)
 # ==================================================
 def render_kpi_card(
     title: str,
     value: Any,
     unit: str = "",
     icon_class: str = "fa-chart-line",
-    color_class: str = "primary",
+    color: str = "primary",
 ) -> dbc.Card:
-    """สร้าง Card KPI แบบมี Gradient และ Icon"""
-    card_color = COLOR_MAP.get(color_class, COLOR_MAP["primary"])
+
+    accent = THEME.get(color, THEME["primary"])
+
     return dbc.Card(
-        dbc.CardBody([
-            html.Div([
-                html.I(
-                    className=f"fas {icon_class} fa-2x me-3 text-white",
-                    style={"opacity": "0.8"}
-                ),
-                html.Div([
-                    html.H6(title, className="text-white-50 mb-1 fw-light", style={"fontSize": "0.85rem"}),
-                    html.H3(value, className="text-white fw-bold mb-0", style={"letterSpacing": "1px"}),
-                    html.Small(unit, className="text-white-50") if unit else None,
-                ], className="text-end"),
-            ], className="d-flex justify-content-between align-items-center"),
-        ], className="py-3"),
-        className="shadow-lg rounded-3 border-0 h-100 hover-zoom",
-        style={"background": f"linear-gradient(135deg, {card_color} 0%, {card_color}cc 100%)"}
+        dbc.CardBody(
+            [
+                html.Div(
+                    [
+                        html.Div(
+                            html.I(
+                                className=f"fas {icon_class}",
+                                style={
+                                    "color": accent,
+                                    "fontSize": "26px",
+                                },
+                            ),
+                            className="me-3",
+                        ),
+                        html.Div(
+                            [
+                                html.Div(
+                                    title,
+                                    style={
+                                        "fontSize": "0.85rem",
+                                        "color": THEME["muted"],
+                                        "fontWeight": 600,
+                                    },
+                                ),
+                                html.Div(
+                                    value,
+                                    style={
+                                        "fontSize": "1.6rem",
+                                        "fontWeight": 700,
+                                        "color": THEME["text"],
+                                    },
+                                ),
+                                html.Div(
+                                    unit,
+                                    style={
+                                        "fontSize": "0.75rem",
+                                        "color": THEME["muted"],
+                                    },
+                                )
+                                if unit
+                                else None,
+                            ]
+                        ),
+                    ],
+                    className="d-flex align-items-center",
+                )
+            ],
+            className="py-3 px-3",
+        ),
+        className="shadow-sm rounded-3 border-0 h-100",
+        style={
+            "borderLeft": f"5px solid {accent}",
+            "backgroundColor": THEME["bg_card"],
+        },
     )
 
 # ==================================================
-# 2. KPI Overview (สำหรับหน้าแรก)
+# Overview KPI
 # ==================================================
 def render_overview_kpis(df: pd.DataFrame) -> dbc.Row:
     if df.empty:
-        return dbc.Alert("ไม่พบข้อมูล Overview", color="warning", className="text-center")
+        return dbc.Alert("ไม่พบข้อมูล Overview", color="warning")
 
     total_members = len(df)
     total_branches = df["branch_no"].nunique() if "branch_no" in df.columns else 0
     prov_col = "province_name" if "province_name" in df.columns else "province"
     total_provinces = df[prov_col].nunique() if prov_col in df.columns else 0
-    
     total_income = df["Income_Clean"].sum() if "Income_Clean" in df.columns else 0
-    income_display = f"{total_income / 1_000_000:.2f}M" if total_income >= 1_000_000 else f"{total_income:,.0f}"
 
-    return dbc.Row([
-        dbc.Col(render_kpi_card("สมาชิกทั้งหมด", f"{total_members:,}", "คน", "fa-users", "primary"), lg=3, md=6),
-        dbc.Col(render_kpi_card("สาขาที่ให้บริการ", f"{total_branches:,}", "สาขา", "fa-store", "purple"), lg=3, md=6),
-        dbc.Col(render_kpi_card("จังหวัดที่ครอบคลุม", f"{total_provinces:,}", "จังหวัด", "fa-map-marked-alt", "success"), lg=3, md=6),
-        dbc.Col(render_kpi_card("รายได้รวมสมาชิก", income_display, "บาท", "fa-hand-holding-usd", "orange"), lg=3, md=6),
-    ], className="g-3 mb-4")
+    income_display = (
+        f"{total_income/1_000_000:.2f}M"
+        if total_income >= 1_000_000
+        else f"{total_income:,.0f}"
+    )
+
+    return dbc.Row(
+        [
+            dbc.Col(render_kpi_card("สมาชิกทั้งหมด", f"{total_members:,}", "คน", "fa-users", "primary"), lg=3, md=6),
+            dbc.Col(render_kpi_card("สาขา", f"{total_branches:,}", "สาขา", "fa-store", "info"), lg=3, md=6),
+            dbc.Col(render_kpi_card("จังหวัด", f"{total_provinces:,}", "จังหวัด", "fa-map", "success"), lg=3, md=6),
+            dbc.Col(render_kpi_card("รายได้รวม", income_display, "บาท", "fa-coins", "orange"), lg=3, md=6),
+        ],
+        className="g-3 mb-4",
+    )
 
 # ==================================================
 # 3. KPI member 
@@ -92,21 +131,31 @@ def render_member_kpis(df: pd.DataFrame) -> dbc.Row:
 
     return dbc.Row([
         dbc.Col(render_kpi_card("สมาชิกทั้งหมด", f"{total_members:,}", "คน", "fa-users", "red"), lg=3, md=6),
-        dbc.Col(render_kpi_card("สมาชิกเพศชาย", f"{male_count:,}", "คน", "fa-mars", "success"), lg=3, md=6),
-        dbc.Col(render_kpi_card("สมาชิกเพศหญิง", f"{female_count:,}", "คน", "fa-venus", "pink"), lg=3, md=6),
-        dbc.Col(render_kpi_card("กลุ่ม Gen หลัก", popular_gen, "Majority", "fa-id-card", "purple"), lg=3, md=6),
+        dbc.Col(render_kpi_card("เพศชาย", f"{male_count:,}", "คน", "fa-mars", "success"), lg=3, md=6),
+        dbc.Col(render_kpi_card("เพศหญิง", f"{female_count:,}", "คน", "fa-venus", "pink"), lg=3, md=6),
+        dbc.Col(render_kpi_card("กลุ่ม Gen หลัก", popular_gen, "ส่วนใหญ่", "fa-id-card", "purple"), lg=3, md=6),
     ], className="g-3 mb-4")
 
+import pandas as pd
+from dash import html
+import dash_bootstrap_components as dbc
+
 # ==================================================
-# 4. KPI Branches
+# Branch KPI (เวอร์ชันสมบูรณ์)
 # ==================================================
 def render_branch_kpis(df: pd.DataFrame) -> dbc.Row:
     if df.empty:
         return dbc.Alert("ไม่พบข้อมูลสาขา", color="warning", className="text-center")
 
+    # -------------------------------
+    # 1. ตั้งค่าคอลัมน์สาขา
+    # -------------------------------
     branch_col = "branch_name" if "branch_name" in df.columns else "branch_no"
     total_branches = df[branch_col].nunique() if branch_col in df.columns else 0
 
+    # -------------------------------
+    # 2. สาขาที่มีสมาชิกมากที่สุด
+    # -------------------------------
     top_branch = "N/A"
     top_count = 0
     if total_branches > 0:
@@ -114,29 +163,82 @@ def render_branch_kpis(df: pd.DataFrame) -> dbc.Row:
         top_branch = counts.idxmax()
         top_count = counts.max()
 
-    avg_income = 0
-    if "Income_Clean" in df.columns:
-        valid_income = df[df["Income_Clean"] > 0]["Income_Clean"]
-        avg_income = valid_income.mean() if not valid_income.empty else 0
+    # -------------------------------
+    # 3. รายได้รวมทุกสาขา
+    # -------------------------------
+    total_income_pool = (
+        df["Income_Clean"].sum()
+        if "Income_Clean" in df.columns
+        else 0
+    )
 
-    avg_approval_days = "0"
-    if "registration_date" in df.columns and "approval_date" in df.columns:
-        reg_dt = pd.to_datetime(df["registration_date"], errors='coerce')
-        app_dt = pd.to_datetime(df["approval_date"], errors='coerce')
-        days_diff = (app_dt - reg_dt).dt.days
-        valid_diff = days_diff[days_diff >= 0]
-        if not valid_diff.empty:
-            avg_approval_days = f"{valid_diff.mean():.1f}"
-    
-    return dbc.Row([
-        dbc.Col(render_kpi_card("สาขาทั้งหมด", f"{total_branches:,}", "แห่ง", "fa-store", "primary"), lg=3, md=6),
-        dbc.Col(render_kpi_card("สาขายอดนิยม (Top)", f"{top_branch}", f"({top_count:,} คน)", "fa-trophy", "orange"), lg=3, md=6),
-        dbc.Col(render_kpi_card("ระยะเวลาอนุมัติเฉลี่ย", avg_approval_days, "วัน (เฉลี่ย)", "fa-clock", "info"), lg=3, md=6),
-        dbc.Col(render_kpi_card("รายได้เฉลี่ยสมาชิก", f"{avg_income:,.0f}", "บาท/เดือน", "fa-money-bill-wave", "success"), lg=3, md=6),
-    ], className="g-3 mb-4")
-    
+    # -------------------------------
+    # 4. สมาชิกใหม่ล่าสุด (เดือนล่าสุดในข้อมูล)
+    # -------------------------------
+    latest_members_count = 0
+    latest_month_label = ""
+
+    if "registration_date" in df.columns:
+        df["registration_date"] = pd.to_datetime(df["registration_date"], errors="coerce")
+        valid_dates = df["registration_date"].dropna()
+
+        if not valid_dates.empty:
+            latest_date = valid_dates.max()
+            y, m = latest_date.year, latest_date.month
+
+            latest_members_count = len(
+                df[
+                    (df["registration_date"].dt.year == y) &
+                    (df["registration_date"].dt.month == m)
+                ]
+            )
+
+            thai_months = [
+                "", "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+                "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."
+            ]
+            latest_month_label = f"{thai_months[m]} {y}"
+
+    # -------------------------------
+    # 5. Helper: format ตัวเลข
+    # -------------------------------
+    def format_val(val: float) -> str:
+        if val >= 1_000_000:
+            return f"{val / 1_000_000:.2f}M"
+        elif val >= 1_000:
+            return f"{val / 1_000:.1f}K"
+        return f"{val:,.0f}"
+
+    # -------------------------------
+    # 6. Render KPI Cards
+    # -------------------------------
+    return dbc.Row(
+        [
+            dbc.Col(
+                render_kpi_card("สาขาทั้งหมด",f"{total_branches:,}","แห่ง","fa-store","primary",),
+                lg=3, md=6,
+            ),
+
+            dbc.Col(
+                render_kpi_card("สาขาที่มีสมาชิกสูงสุด",str(top_branch),f"{top_count:,} คน","fa-users","info",),
+                lg=3, md=6,
+            ),
+
+            dbc.Col(
+                render_kpi_card("รายได้รวมทุกสาขา",f"฿{format_val(total_income_pool)}","บาท","fa-sack-dollar","success",),
+                lg=3, md=6,
+            ),
+
+            dbc.Col(
+                render_kpi_card("สมาชิกใหม่ล่าสุด",f"{latest_members_count:,}",f"({latest_month_label})","fa-user-plus","purple",),
+                lg=3, md=6,
+            ),
+        ],
+        className="g-3 mb-4",
+    )
+
 # ==================================================
-# 5. KPI Address (อัปเดตชื่อคอลัมน์ให้ตรงกับ SQL JOIN)
+# 5. KPI Address 
 # ==================================================
 def render_address_kpis(df: pd.DataFrame) -> dbc.Row:
     if df.empty:
@@ -156,7 +258,7 @@ def render_address_kpis(df: pd.DataFrame) -> dbc.Row:
     ], className="g-3 mb-4")
 
 # ==================================================
-# 6. KPI Performance (คงเดิมแต่เพิ่ม Type Hint)
+# 6. KPI Performance 
 # ==================================================
 def render_performance_kpis(df: pd.DataFrame) -> dbc.Row:
     if df.empty:
@@ -196,7 +298,7 @@ def render_performance_kpis(df: pd.DataFrame) -> dbc.Row:
     ], className="g-3 mb-4")
     
 # ==================================================
-# 7. KPI Amount (Financial 
+# 7. KPI Amount 
 # ==================================================
 def render_amount_kpis(df: pd.DataFrame) -> dbc.Row:   
     # ตรวจสอบว่ามีข้อมูลและคอลัมน์ที่จำเป็นหรือไม่

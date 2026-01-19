@@ -6,6 +6,8 @@ import pandas as pd
 
 from ..data_manager import load_data
 from ..components.kpi_cards import render_branch_kpis
+from ..components.chart_card import chart_card
+from ..components.theme import THEME
 
 CHART_HEIGHT = 340
 
@@ -58,14 +60,9 @@ def get_processed_data():
 # ==================================================
 # 2. Layout Helper (สไตล์เดียวกับ Overview)
 # ==================================================
-def apply_layout(fig, title="", height=CHART_HEIGHT, show_legend=True):
+def apply_layout(fig, height=CHART_HEIGHT):
     """ปรับแต่งรูปแบบกราฟให้เหมือนหน้า Overview"""
     fig.update_layout(
-        title={
-            "text": f"<b>{title}</b>" if title else "",
-            "x": 0.02,
-            "xanchor": "left",
-        },
         height=height,
         margin=dict(t=50, b=40, l=60, r=30),
         plot_bgcolor="rgba(255, 255, 255, 0.02)",
@@ -75,17 +72,7 @@ def apply_layout(fig, title="", height=CHART_HEIGHT, show_legend=True):
             color="#334155",
             size=13
         ),
-        showlegend=show_legend,
-        legend=dict(
-            orientation="h",
-            yanchor="top",
-            y=-0.15,
-            xanchor="center",
-            x=0.5,
-            bgcolor="rgba(255, 255, 255, 0.7)",
-            bordercolor="rgba(148, 163, 184, 0.3)",
-            borderwidth=1
-        ),
+        
         hovermode="closest",
         hoverlabel=dict(
             bgcolor="rgba(15, 23, 42, 0.95)",
@@ -133,7 +120,7 @@ def chart_member_column(df):
         color="branch_name",
         color_discrete_map=BRANCH_COLORS
     )
-
+    
     fig.update_traces(
         texttemplate='%{text:,}',
         textposition='outside',
@@ -144,8 +131,7 @@ def chart_member_column(df):
     fig.update_yaxes(title="จำนวนสมาชิก (คน)")
     fig.update_xaxes(title="สาขา", showgrid=False)
     
-    # เปลี่ยน show_legend เป็น False ตรงนี้ครับ
-    return apply_layout(fig, "จำนวนสมาชิกแต่ละสาขา", show_legend=False)
+    return apply_layout(fig)
 
 def chart_income_line(df):
     """กราฟเส้น: รายได้เฉลี่ยต่อคนรายสาขา"""
@@ -175,7 +161,7 @@ def chart_income_line(df):
     fig.update_yaxes(title="รายได้เฉลี่ย (บาท)", tickformat=",.0f")
     fig.update_xaxes(title="", showgrid=False)
     
-    return apply_layout(fig, "รายได้เฉลี่ยต่อคนรายสาขา", show_legend=True)
+    return apply_layout(fig)
 
 def chart_approval_mode(df):
     """กราฟแท่งนอน: ระยะเวลาอนุมัติเฉลี่ย"""
@@ -206,7 +192,7 @@ def chart_approval_mode(df):
     fig.update_xaxes(title="จำนวนวัน")
     fig.update_yaxes(title="", showgrid=False)
     
-    return apply_layout(fig, "ระยะเวลาอนุมัติเฉลี่ยแต่ละสาขา", show_legend=False)
+    return apply_layout(fig)
 
 def chart_member_income_dual(df):
     summary = df.groupby("branch_name").agg(
@@ -271,7 +257,7 @@ def chart_member_income_dual(df):
 
     fig.update_xaxes(showgrid=False)
     
-    return apply_layout(fig, "เปรียบเทียบสมาชิกและรายได้รวม", show_legend=True)
+    return apply_layout(fig)
 
 # ==================================================
 # 4. Main Layout
@@ -280,64 +266,39 @@ def create_branch_layout():
     df = get_processed_data()
 
     if df.empty:
-        return dbc.Container(
-            dbc.Alert(
-                [
-                    html.I(className="bi bi-exclamation-triangle me-2"),
-                    "ไม่พบข้อมูล กรุณาตรวจสอบการโหลดข้อมูล"
-                ],
-                color="warning",
-                className="mt-5"
-            )
-        )
-
-    def card(fig):
-        """สร้างการ์ดสำหรับกราฟ (สไตล์เดียวกับ Overview)"""
-        return dbc.Card(
-            dbc.CardBody(
-                dcc.Graph(
-                    figure=fig,
-                    config={
-                        "displayModeBar": False,
-                        "responsive": True
-                    }
-                ),
-                style={"padding": "18px"}
-            ),
-            className="shadow-sm rounded-3 border-0 mb-3"
-        )
+        return dbc.Alert("ไม่พบข้อมูล", color="warning", className="mt-5")
 
     return dbc.Container(
         fluid=True,
-        style={
-            "padding": "20px 30px",
-            "maxWidth": "1400px",
-            "margin": "0 auto"
-        },
+        style={"padding": "20px 30px", "maxWidth": "1400px"},
         children=[
-            # Header
-            html.H3(
-                "ข้อมูลสาขา",
-                className="page-title fw-bold mb-3"
-            ),
-            
-            # KPI Cards
+            html.H3("ข้อมูลสาขา", className="fw-bold mb-3"),
             render_branch_kpis(df),
 
-            # Charts Row 1
             dbc.Row(
                 [
-                    dbc.Col(card(chart_member_column(df)), xs=12, lg=6),
-                    dbc.Col(card(chart_income_line(df)), xs=12, lg=6),
+                    dbc.Col(
+                        chart_card(chart_member_column(df), "จำนวนสมาชิกแต่ละสาขา"),
+                        lg=6,
+                    ),
+                    dbc.Col(
+                        chart_card(chart_income_line(df), "รายได้เฉลี่ยต่อคน"),
+                        lg=6,
+                    ),
                 ],
                 className="g-3 mb-3",
             ),
 
-            # Charts Row 2
             dbc.Row(
                 [
-                    dbc.Col(card(chart_approval_mode(df)), xs=12, lg=6),
-                    dbc.Col(card(chart_member_income_dual(df)), xs=12, lg=6),
+                    dbc.Col(
+                        chart_card(chart_approval_mode(df), "ระยะเวลาอนุมัติเฉลี่ย"),
+                        lg=6,
+                    ),
+                    dbc.Col(
+                        chart_card(chart_member_income_dual(df), "สมาชิก vs รายได้รวม"),
+                        lg=6,
+                    ),
                 ],
                 className="g-3",
             ),

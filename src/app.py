@@ -63,8 +63,8 @@ def render_page_content(pathname):
     elif pathname == "/amount":   
         return amount.layout
 
-    # elif pathname == "/performance":
-    #     return performance.layout
+    elif pathname == "/performance":
+        return performance.layout
 
 
     # 3. หน้า 404 (เปลี่ยนจาก Jumbotron เป็น Div)
