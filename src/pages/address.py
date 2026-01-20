@@ -1,282 +1,254 @@
-from dash import dcc, html
+import dash
+from dash import dcc, html, Input, Output, State, callback
 import dash_bootstrap_components as dbc
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
+from functools import lru_cache
 
 from ..data_manager import load_data
 from ..components.kpi_cards import render_address_kpis
+from ..components.chart_card import chart_card
+from ..components.theme import THEME
 
 # ==================================================
 # Config
 # ==================================================
-CHART_HEIGHT = 340
-COLOR_PALETTE = px.colors.qualitative.Set2
+CHART_HEIGHT = 500 
 
 # ==================================================
-# 1. Data Processing
+# Data Processing & Cache
 # ==================================================
-def get_processed_data():
-    df = load_data()
-    if df.empty:
-        return df
-
-    for col in ["province_name", "district_area", "sub_area"]:
+def preprocess_geographic(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty: return df
+    cols = ["province_name", "district_area", "sub_area", "village_name"]
+    for col in cols:
         if col in df.columns:
             df[col] = df[col].fillna("ไม่ระบุ")
-
-    if "income" in df.columns:
-        df["Income_Clean"] = (
-            df["income"]
-            .astype(str)
-            .str.replace(",", "")
-            .pipe(pd.to_numeric, errors="coerce")
-            .fillna(0)
-        )
-
-    if "age" in df.columns and "Age_Group" not in df.columns:
-        df["Age_Group"] = pd.cut(
-            df["age"],
-            bins=[0, 25, 35, 45, 55, 65, 120],
-            labels=["0-25", "26-35", "36-45", "46-55", "56-65", "65+"]
-        ).astype(str)
-
     return df
 
+@lru_cache(maxsize=1)
+def load_address_data():
+    return preprocess_geographic(load_data())
+
 # ==================================================
-# 2. Layout Helper
+# Helper: Treemap Layout
 # ==================================================
-def apply_layout(fig, title="", height=CHART_HEIGHT, show_legend=True):
+def apply_treemap_layout(fig, height=CHART_HEIGHT):
     fig.update_layout(
-        title=dict(
-            text=f"<b>{title}</b>" if title else "",
-            x=0.02,
-            xanchor="left"
-        ),
         height=height,
-        margin=dict(t=80, b=50, l=60, r=30),
-        plot_bgcolor="rgba(255,255,255,0.02)",
-        paper_bgcolor="rgba(255,255,255,0)",
-        font=dict(
-            family="Sarabun, sans-serif",
-            size=13,
-            color="#334155"
-        ),
-        showlegend=show_legend,
-        legend=dict(
-            orientation="h",
-            y=-0.2,
-            x=0.5,
-            xanchor="center"
-        ),
-        hovermode="closest"
+        margin=dict(t=30, b=10, l=10, r=10), 
+        paper_bgcolor=THEME["paper"],
+        plot_bgcolor=THEME["bg_plot"],
+        font=dict(family="Sarabun, sans-serif", size=14, color=THEME["text"]),
+        transition={'duration': 0}
     )
-
-    fig.update_xaxes(
-        showgrid=False,
-        showline=True,
-        linecolor="#E2E8F0"
-    )
-    fig.update_yaxes(
-        showgrid=True,
-        gridcolor="rgba(203,213,225,0.4)",
-        showline=True,
-        linecolor="#E2E8F0"
-    )
-
+    fig.update_coloraxes(showscale=False)
     return fig
 
-# ==================================================
-# 3. Charts
-# ==================================================
-def chart_province_age_distribution(df):
-    top_6 = df["province_name"].value_counts().nlargest(6).index
-    sub = df[df["province_name"].isin(top_6)].copy()
-
-    summary = (
-        sub.groupby(["province_name", "Age_Group"])
-        .size()
-        .reset_index(name="count")
-    )
-
-    fig = px.bar(
-        summary,
-        x="Age_Group",
-        y="count",
-        color="Age_Group",
-        facet_col="province_name",
-        facet_col_wrap=3,
-        color_discrete_sequence=COLOR_PALETTE
-    )
-
-    fig.for_each_annotation(
-        lambda a: a.update(
-            text=f"<b>{a.text.split('=')[-1]}</b>",
-            font=dict(size=12)
+def get_drilldown_chart(df, level="province"):
+    col_map = {
+        "province": "province_name",
+        "district": "district_area",
+        "sub_district": "sub_area",
+        "village": "village_name"
+    }
+    target_col = col_map.get(level, "province_name")
+    
+    if target_col not in df.columns or df.empty:
+        fig = go.Figure()
+        fig.add_annotation(
+            text="ไม่พบข้อมูลในระดับนี้", 
+            showarrow=False, 
+            font=dict(size=18, color=THEME["text"])
         )
-    )
+        fig.update_xaxes(showgrid=False, zeroline=False, visible=False, range=[0, 1])
+        fig.update_yaxes(showgrid=False, zeroline=False, visible=False, range=[0, 1])
+        return apply_treemap_layout(fig)
 
+    counts = df[target_col].value_counts().reset_index()
+    counts.columns = [target_col, "count"]
+    
+    color_scales = {
+        "province": px.colors.sequential.Purples_r,
+        "district": px.colors.sequential.Blues_r,
+        "sub_district": px.colors.sequential.Teal_r, 
+        "village": px.colors.sequential.Greens_r
+    }
+
+    fig = px.treemap(
+        counts,
+        path=[target_col], 
+        values='count',
+        color='count',
+        color_continuous_scale=color_scales.get(level, "Purples")
+    )
+    
+    # --- จุดที่แก้ไข: ปรับขนาดตัวเลขให้ใหญ่ขึ้น ---
     fig.update_traces(
-        marker=dict(line=dict(width=1, color="white")),
-        hovertemplate="<b>%{x}</b><br>จำนวน: %{y:,} คน<extra></extra>"
+        textinfo="label+value",
+        # ใช้ HTML tags เพื่อปรับขนาด font เฉพาะจุด
+        texttemplate="<span style='font-size: 16px'>%{label}</span><br><br><span style='font-size: 26px'><b>%{value:,}</b></span> <span style='font-size: 14px'>คน</span>",
+        hovertemplate="<b>%{label}</b><br>จำนวน: %{value:,} คน<extra></extra>",
+        marker=dict(line=dict(width=1, color='white')),
+        textposition="middle center" # จัดข้อความให้อยู่กลางกล่อง
     )
-
-    fig.update_layout(
-        height=520,
-        showlegend=False
-    )
-
-    return apply_layout(
-        fig,
-        "สัดส่วนประชากรแยกตามช่วงอายุ (Top 6 จังหวัด)",
-        height=520,
-        show_legend=False
-    )
-
-# def chart_province_career(df):
-#     top_5 = df["province_name"].value_counts().nlargest(5).index
-#     sub = df[df["province_name"].isin(top_5)].copy()
-
-#     top_career = sub["career_name"].value_counts().nlargest(5).index
-#     sub["career_group"] = sub["career_name"].apply(
-#         lambda x: x if x in top_career else "อื่นๆ"
-#     )
-
-#     summary = (
-#         sub.groupby(["province_name", "career_group"])
-#         .size()
-#         .reset_index(name="count")
-#     )
-
-#     fig = px.bar(
-#         summary,
-#         x="province_name",
-#         y="count",
-#         color="career_group",
-#         color_discrete_sequence=COLOR_PALETTE
-#     )
-
-#     # ✅ ตรงนี้คือจุดที่ถูกต้อง
-#     fig.update_layout(
-#         barmode="stack",
-#         barnorm="percent"
-#     )
-
-#     fig.update_traces(
-#         hovertemplate="<b>%{x}</b><br>%{fullData.name}: %{y:.1f}%<extra></extra>",
-#         marker=dict(line=dict(width=1, color="white"))
-#     )
-
-#     fig.update_yaxes(title="สัดส่วน (%)", tickformat=".0f")
-#     fig.update_xaxes(title="", showgrid=False)
-
-#     return apply_layout(fig, "วิเคราะห์สัดส่วนอาชีพรายจังหวัด (100%)")
-
-# def chart_income_gap_analysis(df):
-#     summary = (
-#         df.groupby("province_name")["Income_Clean"]
-#         .agg(["mean", "median"])
-#         .nlargest(8, "mean")
-#         .reset_index()
-#     )
-
-#     fig = px.bar(
-#         summary,
-#         x="province_name",
-#         y=["mean", "median"],
-#         barmode="group",
-#         color_discrete_map={
-#             "mean": "#3B82F6",
-#             "median": "#10B981"
-#         }
-#     )
-
-#     fig.for_each_trace(lambda t: t.update(
-#         name="ค่าเฉลี่ย" if t.name == "mean" else "ค่ากลาง",
-#         hovertemplate="<b>%{x}</b><br>%{y:,.0f} บาท<extra></extra>"
-#     ))
-
-#     fig.update_yaxes(title="บาท")
-
-#     return apply_layout(fig, "ช่องว่างรายได้: ค่าเฉลี่ย vs ค่ากลาง")
-
-# def chart_top_subdistricts(df):
-#     counts = (
-#         df.groupby(["sub_area", "province_name"])
-#         .size()
-#         .reset_index(name="count")
-#         .sort_values("count", ascending=False)
-#         .head(10)
-#     )
-
-#     counts["label"] = counts["sub_area"] + " (" + counts["province_name"] + ")"
-#     counts = counts.sort_values("count")
-
-#     fig = go.Figure(
-#         go.Bar(
-#             y=counts["label"],
-#             x=counts["count"],
-#             orientation="h",
-#             text=[f"{v:,} คน" for v in counts["count"]],
-#             textposition="inside",
-#             marker=dict(
-#                 color=counts["count"],
-#                 colorscale="Blues",
-#                 line=dict(color="white", width=2)
-#             )
-#         )
-#     )
-
-#     fig.update_xaxes(title="จำนวนคน")
-
-#     return apply_layout(fig, "10 อันดับตำบลที่มีความหนาแน่นสูงสุด", show_legend=False)
+    
+    return apply_treemap_layout(fig)
 
 # ==================================================
-# 4. Card Helper
+# Layout
 # ==================================================
-def card(fig):
-    return dbc.Card(
-        dbc.CardBody(
-            dcc.Graph(
-                figure=fig,
-                config={"displayModeBar": False},
-                style={"height": "100%"}
-            ),
-            style={"padding": "18px", "overflow": "hidden"}
-        ),
-        className="shadow-sm rounded-3 border-0 mb-3"
-    )
-
-# ==================================================
-# 5. Main Layout
-# ==================================================
-def create_geographic_layout():
-    df = get_processed_data()
-    if df.empty:
-        return dbc.Alert("ไม่พบข้อมูล", color="warning")
-
+def geographic_layout():
+    df = load_address_data()
+    initial_fig = get_drilldown_chart(df, "province")
+    
     return dbc.Container(
         fluid=True,
-        style={"padding": "20px 30px", "maxWidth": "1400px"},
+        style={"padding": "20px 30px", "maxWidth": "1400px", "margin": "0 auto"},
         children=[
-            html.H3("ข้อมูลเชิงพื้นที่", className="fw-bold mb-3"),
+            dcc.Store(id='drill-path', data={'level': 'province', 'filters': {}}),
+            
+            html.Div([
+                html.Div([
+                    html.H3("วิเคราะห์สัดส่วนข้อมูลพื้นที่", className="fw-bold mb-0"),
+                    html.P("คลิกที่กล่องเพื่อเจาะลึก หรือกดไอคอนย้อนกลับมุมขวา", className="text-muted mb-0")
+                ]),
+            ], className="d-flex justify-content-between align-items-end mb-4"),
+
             render_address_kpis(df),
 
-            dbc.Row([dbc.Col(card(chart_province_age_distribution(df)), xs=12)]),
+            dbc.Row([
+                dbc.Col([
+                    html.Div([
+                        # ปุ่มย้อนกลับ
+                        dbc.Button(
+                            html.Div([
+                                # --- จุดที่แก้ไข: เพิ่มสีให้ตัวลูกศรตรงนี้ ---
+                                html.I(
+                                    className="bi bi-arrow-left", 
+                                    style={
+                                        "marginRight": "8px", 
+                                        "color": "#007bff", # เปลี่ยนสีลูกศรเป็นสีน้ำเงิน (หรือใส่สีที่ต้องการ)
+                                        "fontSize": "1.2rem",
+                                        "fontWeight": "bold"
+                                    }
+                                ),
+                                html.Span("ย้อนกลับ", style={"color": "#444"}) # สีข้อความปกติ
+                            ], className="d-flex align-items-center justify-content-center"),
+                            id="btn-icon-reset",
+                            color="light", # พื้นหลังปุ่มยังคงสีอ่อนสะอาดตา
+                            style={
+                                "position": "absolute",
+                                "top": "15px",
+                                "right": "15px",
+                                "zIndex": "100",
+                                "borderRadius": "20px",
+                                "padding": "5px 18px",
+                                "display": "none",
+                                "boxShadow": "0 4px 10px rgba(0,0,0,0.12)",
+                                "border": "1px solid #dee2e6",
+                            },
+                        ),
+                        
+                        html.Div(id="drill-card-wrapper", children=[
+                            chart_card(
+                                dcc.Graph(
+                                    id='drill-graph', 
+                                    figure=initial_fig, 
+                                    config={"displayModeBar": False},
+                                    style={"cursor": "pointer", "height": f"{CHART_HEIGHT}px"} 
+                                ),
+                                title="สัดส่วนสมาชิกแยกตามจังหวัด"
+                            )
+                        ])
+                    ], style={"position": "relative"}) 
+                ], width=12)
+            ], className="g-3")
+        ]
+    )
+# ==================================================
+# Callback: รวมลอจิกการกดปุ่ม Icon และการ Reset
+# ==================================================
+@callback(
+    [Output('drill-card-wrapper', 'children'),
+     Output('drill-path', 'data'),
+     Output('btn-icon-reset', 'style')],
+    [Input('drill-graph', 'clickData'),
+     Input('btn-icon-reset', 'n_clicks'),
+     Input('drill-graph', 'n_clicks')],
+    [State('drill-path', 'data'),
+     State('btn-icon-reset', 'style')],
+    prevent_initial_call=True
+)
+def handle_geo_drilldown(clickData, btn_clicks, graph_clicks, current_state, current_btn_style):
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        return dash.no_update, dash.no_update, dash.no_update
+        
+    triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    df = load_address_data()
+    level = current_state.get('level', 'province')
+    filters = current_state.get('filters', {})
 
-            # dbc.Row(
-            #     [
-            #         dbc.Col(card(chart_province_career(df)), lg=6),
-            #         dbc.Col(card(chart_income_gap_analysis(df)), lg=6),
-            #     ],
-            #     className="g-3"
-            # ),
+    # เงื่อนไขการ Reset (กลับหน้าแรก):
+    # 1. กดที่ปุ่มไอคอน (btn-icon-reset)
+    # 2. อยู่ระดับหมู่บ้านแล้วคลิกกราฟ
+    # 3. คลิกบนกราฟที่ไม่มีข้อมูล (Empty State)
+    should_reset = (triggered_id == 'btn-icon-reset') or \
+                   (level == 'village' and triggered_id == 'drill-graph') or \
+                   (triggered_id == 'drill-graph' and not clickData)
 
-            # dbc.Row(
-            #     [dbc.Col(card(chart_top_subdistricts(df)), lg=6)],
-            #     className="g-3"
-            # )
-        ],
+    if should_reset:
+        level = 'province'
+        filters = {}
+    else:
+        # เจาะลึกข้อมูล (Drill-down)
+        try:
+            if clickData:
+                selected_loc = clickData['points'][0]['label']
+                if level == 'province':
+                    level = 'district'; filters['province_name'] = selected_loc
+                elif level == 'district':
+                    level = 'sub_district'; filters['district_area'] = selected_loc
+                elif level == 'sub_district':
+                    level = 'village'; filters['sub_area'] = selected_loc
+        except:
+            level = 'province'; filters = {}
+
+    # สร้างกราฟและหัวข้อใหม่
+    dff = df.copy()
+    for col, val in filters.items():
+        if col in dff.columns:
+            dff = dff[dff[col] == val]
+
+    fig = get_drilldown_chart(dff, level)
+    
+    titles = {
+        "province": "สัดส่วนสมาชิกแยกตามจังหวัด",
+        "district": f"สัดส่วนอำเภอในจังหวัด {filters.get('province_name', '')}",
+        "sub_district": f"สัดส่วนตำบลในอำเภอ {filters.get('district_area', '')}",
+        "village": f"สัดส่วนหมู่บ้านในตำบล {filters.get('sub_area', '')}"
+    }
+    
+    new_card_content = chart_card(
+        dcc.Graph(
+            id='drill-graph', 
+            figure=fig, 
+            config={"displayModeBar": False},
+            style={"cursor": "pointer", "height": f"{CHART_HEIGHT}px"}
+        ),
+        title=titles.get(level, "ข้อมูลพื้นที่")
     )
 
-layout = create_geographic_layout()
+    # จัดการการแสดงผลของปุ่ม Reset มุมขวา
+    # ถ้าอยู่หน้าแรก (province) ให้ซ่อนปุ่มไว้
+    new_btn_style = current_btn_style.copy()
+    if level == 'province':
+        new_btn_style["display"] = "none"
+    else:
+        new_btn_style["display"] = "block"
+    
+    return new_card_content, {'level': level, 'filters': filters}, new_btn_style
+
+layout = geographic_layout()

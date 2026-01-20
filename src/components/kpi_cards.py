@@ -300,66 +300,45 @@ def render_performance_kpis(df: pd.DataFrame) -> dbc.Row:
 # ==================================================
 # 7. KPI Amount 
 # ==================================================
-def render_amount_kpis(df: pd.DataFrame) -> dbc.Row:   
-    # ตรวจสอบว่ามีข้อมูลและคอลัมน์ที่จำเป็นหรือไม่
-    required_cols = ["income", "net_yearly_income", "yearly_debt_payments"]
-    if df.empty or not all(col in df.columns for col in required_cols):
-        return dbc.Alert("ไม่พบข้อมูลสำหรับการคำนวณรายได้-รายจ่าย", color="info", className="text-center")
+def render_amount_kpis(df: pd.DataFrame) -> dbc.Row:
+    if df.empty:
+        return dbc.Alert("ไม่พบข้อมูลสำหรับการวิเคราะห์สินเชื่อ", color="warning")
 
-    # 1. รายได้รวมทั้งหมด (Gross Income)
-    total_gross_income = df["income"].sum()
+    # 1. ยอดสินเชื่อคงค้างรวม (Total Outstanding)
+    # คำนวณจาก (วงเงิน * % ที่ใช้ไป)
+    outstanding = (df['credit_limit'] * df['credit_limit_used_pct'] / 100).sum()
 
-    # 2. รายรับ (Net Income) - ในที่นี้ใช้ net_yearly_income
-    total_net_income = df["net_yearly_income"].sum()
+    # 2. % หนี้เสีย (NPL Estimate) 
+    # สมมติฐาน: คนที่ใช้เครดิตเกิน 95% มีโอกาสเป็นหนี้เสียสูง
+    npl_count = len(df[df['credit_limit_used_pct'] > 95])
+    npl_rate = (npl_count / len(df)) * 100 if len(df) > 0 else 0
 
-    # 3. รายจ่าย (Expenses/Debt) - ในที่นี้คือภาระหนี้รายปี
-    total_expenses = df["yearly_debt_payments"].sum()
-    
-    # 4. คงเหลือ (Disposable Income) - รายรับหักรายจ่าย
-    total_disposable = total_net_income - total_expenses
+    # 3. ยอดปล่อยใหม่ (MTD - Month to Date)
+    # อ้างอิงจากรายได้ของสมาชิกใหม่ในเดือนล่าสุดที่สมัครเข้ามา
+    mtd_new_loan = 0
+    if 'registration_date' in df.columns:
+        df['registration_date'] = pd.to_datetime(df['registration_date'])
+        latest_date = df['registration_date'].max()
+        new_members = df[
+            (df['registration_date'].dt.month == latest_date.month) & 
+            (df['registration_date'].dt.year == latest_date.year)
+        ]
+        # ยอดปล่อยใหม่ประมาณการจาก Credit Limit ของสมาชิกใหม่
+        mtd_new_loan = new_members['credit_limit'].sum()
 
-    # ฟังก์ชันช่วยจัดรูปแบบตัวเลข (M = Million, K = Thousand)
-    def format_val(val):
-        if val >= 1_000_000:
-            return f"฿{val / 1_000_000:.2f}M"
-        elif val >= 1_000:
-            return f"฿{val / 1_000:.1f}K"
+    # 4. เป้าหมายจัดเก็บ (Collection Target)
+    # รายเดือนจากภาระหนี้รายปี
+    monthly_collection_target = df['yearly_debt_payments'].sum() / 12
+
+    def format_m(val):
+        if val >= 1_000_000: return f"฿{val/1_000_000:.2f}M"
         return f"฿{val:,.0f}"
 
     return dbc.Row([
-        # 1. รายได้รวมทั้งหมด
-        dbc.Col(render_kpi_card(
-            "รายได้รวมทั้งหมด",
-            format_val(total_gross_income),
-            "",
-            "fa fa-credit-card",
-            "primary"
-        ), lg=3, md=6),
-        
-        # 2. รายรับ
-        dbc.Col(render_kpi_card(
-            "รายรับสุทธิ",
-            format_val(total_net_income),
-            "",
-            "fa-solid fa-arrow-up",
-            "info"
-        ), lg=3, md=6),
-        
-        # 3. รายจ่าย
-        dbc.Col(render_kpi_card(
-            "รายจ่าย/ภาระหนี้",
-            format_val(total_expenses),
-            "",
-            "fa fa-arrow-down",
-            "red"
-        ), lg=3, md=6),
-        
-        # 4. คงเหลือ
-        dbc.Col(render_kpi_card(
-            "คงเหลือสุทธิ",
-            format_val(total_disposable),
-            "",
-            "fa-wallet",
-            "success"
-        ), lg=3, md=6),
+        dbc.Col(render_kpi_card("เงินทุนที่อยู่ในมือลูกค้า", format_m(outstanding), "ยอดรวมปัจจุบัน", "fa-hand-holding-dollar", "primary"), lg=3, md=6),
+        dbc.Col(render_kpi_card("หนี้เสีย", f"{npl_rate:.1f}%", "ความเสี่ยงสูง", "fa-user-slash", "danger"), lg=3, md=6),
+        dbc.Col(render_kpi_card("เงินกู้ที่บริษัทโอนให้ลูกค้า", format_m(mtd_new_loan), "ในเดือนปัจจุบัน", "fa-file-invoice-dollar", "info"), lg=3, md=6),
+        dbc.Col(render_kpi_card("เดือนนี้ต้องเก็บเงิน", format_m(monthly_collection_target), "ต่อเดือน", "fa-calendar-check", "success"), lg=3, md=6),
     ], className="g-3 mb-4")
+
+
