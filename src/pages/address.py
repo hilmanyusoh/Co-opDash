@@ -15,9 +15,10 @@ from ..components.theme import THEME
 # Config
 # ==================================================
 CHART_HEIGHT = 500 
+UI_REVISION_KEY = "geo-static" # ล็อกสถานะกราฟข้ามการรีเฟรช
 
 # ==================================================
-# Data Processing & Cache
+# Data Processing & Cache (Logic เดิม)
 # ==================================================
 def preprocess_geographic(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty: return df
@@ -32,15 +33,22 @@ def load_address_data():
     return preprocess_geographic(load_data())
 
 # ==================================================
-# Helper: Treemap Layout
+# 3. Layout Helper (Standardized Font & Margins)
 # ==================================================
-def apply_treemap_layout(fig, height=CHART_HEIGHT):
+def apply_address_layout(fig, height=CHART_HEIGHT, right_margin=30):
     fig.update_layout(
+        autosize=True,
         height=height,
-        margin=dict(t=30, b=10, l=10, r=10), 
+        uirevision=UI_REVISION_KEY,
+        # ปรับ Margin ให้เท่ากับหน้า Branch (t=40, b=35, l=45, r=30)
+        margin=dict(t=40, b=35, l=10, r=right_margin), 
         paper_bgcolor=THEME["paper"],
         plot_bgcolor=THEME["bg_plot"],
-        font=dict(family="Sarabun, sans-serif", size=14, color=THEME["text"]),
+        font=dict(
+            family="Sarabun, sans-serif", 
+            size=13, # ขนาดฟอนต์มาตรฐาน 13
+            color=THEME["text"]
+        ),
         transition={'duration': 0}
     )
     fig.update_coloraxes(showscale=False)
@@ -57,18 +65,13 @@ def get_drilldown_chart(df, level="province"):
     
     if target_col not in df.columns or df.empty:
         fig = go.Figure()
-        fig.add_annotation(
-            text="ไม่พบข้อมูลในระดับนี้", 
-            showarrow=False, 
-            font=dict(size=18, color=THEME["text"])
-        )
-        fig.update_xaxes(showgrid=False, zeroline=False, visible=False, range=[0, 1])
-        fig.update_yaxes(showgrid=False, zeroline=False, visible=False, range=[0, 1])
-        return apply_treemap_layout(fig)
+        fig.add_annotation(text="ไม่พบข้อมูลในระดับนี้", showarrow=False)
+        return apply_address_layout(fig)
 
     counts = df[target_col].value_counts().reset_index()
     counts.columns = [target_col, "count"]
     
+    # Coloring: ใช้ชุดสีตามลำดับความลึก
     color_scales = {
         "province": px.colors.sequential.Purples_r,
         "district": px.colors.sequential.Blues_r,
@@ -84,22 +87,21 @@ def get_drilldown_chart(df, level="province"):
         color_continuous_scale=color_scales.get(level, "Purples")
     )
     
-    # --- จุดที่แก้ไข: ปรับขนาดตัวเลขให้ใหญ่ขึ้น ---
     fig.update_traces(
         textinfo="label+value",
-        # ใช้ HTML tags เพื่อปรับขนาด font เฉพาะจุด
-        texttemplate="<span style='font-size: 16px'>%{label}</span><br><br><span style='font-size: 26px'><b>%{value:,}</b></span> <span style='font-size: 14px'>คน</span>",
+        # ปรับแต่ง Text และขนาด Font ภายในกล่อง Treemap
+        texttemplate="<span style='font-size: 15px'>%{label}</span><br><span style='font-size: 22px'><b>%{value:,}</b></span>",
         hovertemplate="<b>%{label}</b><br>จำนวน: %{value:,} คน<extra></extra>",
         marker=dict(line=dict(width=1, color='white')),
-        textposition="middle center" # จัดข้อความให้อยู่กลางกล่อง
+        textposition="middle center"
     )
     
-    return apply_treemap_layout(fig)
+    return apply_address_layout(fig)
 
 # ==================================================
-# Layout
+# Layout (Logic โครงสร้างเดิม)
 # ==================================================
-def geographic_layout():
+def address_layout():
     df = load_address_data()
     initial_fig = get_drilldown_chart(df, "province")
     
@@ -121,43 +123,24 @@ def geographic_layout():
             dbc.Row([
                 dbc.Col([
                     html.Div([
-                        # ปุ่มย้อนกลับ
                         dbc.Button(
                             html.Div([
-                                # --- จุดที่แก้ไข: เพิ่มสีให้ตัวลูกศรตรงนี้ ---
-                                html.I(
-                                    className="bi bi-arrow-left", 
-                                    style={
-                                        "marginRight": "8px", 
-                                        "color": "#007bff", # เปลี่ยนสีลูกศรเป็นสีน้ำเงิน (หรือใส่สีที่ต้องการ)
-                                        "fontSize": "1.2rem",
-                                        "fontWeight": "bold"
-                                    }
-                                ),
-                                html.Span("ย้อนกลับ", style={"color": "#444"}) # สีข้อความปกติ
-                            ], className="d-flex align-items-center justify-content-center"),
+                                html.I(className="bi bi-arrow-left", style={"marginRight": "8px", "color": THEME["primary"], "fontSize": "1.1rem"}),
+                                html.Span("ย้อนกลับ")
+                            ], className="d-flex align-items-center"),
                             id="btn-icon-reset",
-                            color="light", # พื้นหลังปุ่มยังคงสีอ่อนสะอาดตา
+                            color="light",
                             style={
-                                "position": "absolute",
-                                "top": "15px",
-                                "right": "15px",
-                                "zIndex": "100",
-                                "borderRadius": "20px",
-                                "padding": "5px 18px",
-                                "display": "none",
-                                "boxShadow": "0 4px 10px rgba(0,0,0,0.12)",
-                                "border": "1px solid #dee2e6",
+                                "position": "absolute", "top": "15px", "right": "15px", "zIndex": "100",
+                                "borderRadius": "20px", "display": "none", "boxShadow": "0 2px 5px rgba(0,0,0,0.1)"
                             },
                         ),
-                        
                         html.Div(id="drill-card-wrapper", children=[
                             chart_card(
                                 dcc.Graph(
-                                    id='drill-graph', 
-                                    figure=initial_fig, 
+                                    id='drill-graph', figure=initial_fig, 
                                     config={"displayModeBar": False},
-                                    style={"cursor": "pointer", "height": f"{CHART_HEIGHT}px"} 
+                                    style={"height": f"{CHART_HEIGHT}px"} 
                                 ),
                                 title="สัดส่วนสมาชิกแยกตามจังหวัด"
                             )
@@ -167,88 +150,60 @@ def geographic_layout():
             ], className="g-3")
         ]
     )
-# ==================================================
-# Callback: รวมลอจิกการกดปุ่ม Icon และการ Reset
-# ==================================================
+
+# Callback (ยังคง Logic การทำงานเดิมทั้งหมด)
 @callback(
     [Output('drill-card-wrapper', 'children'),
      Output('drill-path', 'data'),
      Output('btn-icon-reset', 'style')],
     [Input('drill-graph', 'clickData'),
-     Input('btn-icon-reset', 'n_clicks'),
-     Input('drill-graph', 'n_clicks')],
+     Input('btn-icon-reset', 'n_clicks')],
     [State('drill-path', 'data'),
      State('btn-icon-reset', 'style')],
     prevent_initial_call=True
 )
-def handle_geo_drilldown(clickData, btn_clicks, graph_clicks, current_state, current_btn_style):
+def handle_geo_drilldown(clickData, btn_clicks, current_state, current_btn_style):
     ctx = dash.callback_context
-    if not ctx.triggered:
-        return dash.no_update, dash.no_update, dash.no_update
-        
     triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
     df = load_address_data()
     level = current_state.get('level', 'province')
     filters = current_state.get('filters', {})
 
-    # เงื่อนไขการ Reset (กลับหน้าแรก):
-    # 1. กดที่ปุ่มไอคอน (btn-icon-reset)
-    # 2. อยู่ระดับหมู่บ้านแล้วคลิกกราฟ
-    # 3. คลิกบนกราฟที่ไม่มีข้อมูล (Empty State)
-    should_reset = (triggered_id == 'btn-icon-reset') or \
-                   (level == 'village' and triggered_id == 'drill-graph') or \
-                   (triggered_id == 'drill-graph' and not clickData)
-
-    if should_reset:
-        level = 'province'
-        filters = {}
-    else:
-        # เจาะลึกข้อมูล (Drill-down)
+    if triggered_id == 'btn-icon-reset':
+        level = 'province'; filters = {}
+    elif clickData:
         try:
-            if clickData:
-                selected_loc = clickData['points'][0]['label']
-                if level == 'province':
-                    level = 'district'; filters['province_name'] = selected_loc
-                elif level == 'district':
-                    level = 'sub_district'; filters['district_area'] = selected_loc
-                elif level == 'sub_district':
-                    level = 'village'; filters['sub_area'] = selected_loc
-        except:
-            level = 'province'; filters = {}
+            selected_loc = clickData['points'][0]['label']
+            if level == 'province':
+                level = 'district'; filters['province_name'] = selected_loc
+            elif level == 'district':
+                level = 'sub_district'; filters['district_area'] = selected_loc
+            elif level == 'sub_district':
+                level = 'village'; filters['sub_area'] = selected_loc
+        except: pass
 
-    # สร้างกราฟและหัวข้อใหม่
     dff = df.copy()
     for col, val in filters.items():
-        if col in dff.columns:
-            dff = dff[dff[col] == val]
+        if col in dff.columns: dff = dff[dff[col] == val]
 
     fig = get_drilldown_chart(dff, level)
     
     titles = {
         "province": "สัดส่วนสมาชิกแยกตามจังหวัด",
-        "district": f"สัดส่วนอำเภอในจังหวัด {filters.get('province_name', '')}",
-        "sub_district": f"สัดส่วนตำบลในอำเภอ {filters.get('district_area', '')}",
-        "village": f"สัดส่วนหมู่บ้านในตำบล {filters.get('sub_area', '')}"
+        "district": f"อำเภอใน {filters.get('province_name', '')}",
+        "sub_district": f"ตำบลใน {filters.get('district_area', '')}",
+        "village": f"หมู่บ้านใน {filters.get('sub_area', '')}"
     }
     
-    new_card_content = chart_card(
-        dcc.Graph(
-            id='drill-graph', 
-            figure=fig, 
-            config={"displayModeBar": False},
-            style={"cursor": "pointer", "height": f"{CHART_HEIGHT}px"}
-        ),
+    new_card = chart_card(
+        dcc.Graph(id='drill-graph', figure=fig, config={"displayModeBar": False}, style={"height": f"{CHART_HEIGHT}px"}),
         title=titles.get(level, "ข้อมูลพื้นที่")
     )
 
-    # จัดการการแสดงผลของปุ่ม Reset มุมขวา
-    # ถ้าอยู่หน้าแรก (province) ให้ซ่อนปุ่มไว้
     new_btn_style = current_btn_style.copy()
-    if level == 'province':
-        new_btn_style["display"] = "none"
-    else:
-        new_btn_style["display"] = "block"
+    new_btn_style["display"] = "none" if level == 'province' else "block"
     
-    return new_card_content, {'level': level, 'filters': filters}, new_btn_style
+    return new_card, {'level': level, 'filters': filters}, new_btn_style
 
-layout = geographic_layout()
+layout = address_layout()

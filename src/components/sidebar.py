@@ -89,30 +89,30 @@ def render_sidebar():
             ),
 
             # 4. Performance (ไม่มีเมนูย่อย)
-            render_single_nav("Performance", "/performance", "fa-chart-line"),
+            render_single_nav("การคาดการณ์", "/performance", "fa-chart-line"),
 
-            html.Div(
-                [
-                    html.Hr(className="my-3"),
-                    html.Small(
-                        [
-                            html.I(className="fas fa-clock me-2"),
-                            f"อัปเดต: {current_time}"
-                        ],
-                        className="text-muted text-center d-block mb-1",
-                    ),
-                    html.Small(
-                        [html.I(className="fas fa-shield-halved me-2"), "v1.2.0"],
-                        className="text-muted text-center d-block",
-                    ),
-                ],
-                style={
-                    "position": "absolute",
-                    "bottom": "15px",
-                    "left": "1rem",
-                    "right": "1rem",
-                },  
-            ),
+            # html.Div(
+            #     [
+            #         html.Hr(className="my-3"),
+            #         html.Small(
+            #             [
+            #                 html.I(className="fas fa-clock me-2"),
+            #                 f"อัปเดต: {current_time}"
+            #             ],
+            #             className="text-muted text-center d-block mb-1",
+            #         ),
+            #         html.Small(
+            #             [html.I(className="fas fa-shield-halved me-2"), "v1.2.0"],
+            #             className="text-muted text-center d-block",
+            #         ),
+            #     ],
+            #     style={
+            #         "position": "absolute",
+            #         "bottom": "15px",
+            #         "left": "1rem",
+            #         "right": "1rem",
+            #     },  
+            # ),
         ],
         style=SIDEBAR_STYLE,
         id="sidebar",

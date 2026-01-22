@@ -1,143 +1,150 @@
-from dash import dcc, html
+import dash
+from dash import dcc, html, Input, Output, callback
 import dash_bootstrap_components as dbc
-import plotly.express as px
-import pandas as pd
 import plotly.graph_objects as go
+import pandas as pd
 import numpy as np
+from functools import lru_cache
+
 from ..data_manager import load_data
+from ..components.chart_card import chart_card
+from ..components.theme import THEME
 from ..components.kpi_cards import render_performance_kpis
 
 # ==================================================
-# 1. Chart Style Helper
+# Config
 # ==================================================
-def chart_style(fig, title):
-    fig.update_layout(
-        title=f"<b>{title}</b>",
-        plot_bgcolor="rgba(245, 247, 250, 0.4)",
-        paper_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Sarabun, sans-serif"),
-        margin=dict(l=60, r=60, t=100, b=60),
-        # Legend ด้านบนกึ่งกลาง
-        legend=dict(
-            orientation="h", 
-            yanchor="bottom", 
-            y=1.05, 
-            xanchor="center", 
-            x=0.5
-        ),
-        hovermode="x unified"
-    )
-    # ปรับแต่ง Grid
-    fig.update_xaxes(showgrid=False, zeroline=False)
-    fig.update_yaxes(gridcolor="rgba(0,0,0,0.05)", zeroline=False)
-    return fig
+CHART_HEIGHT = 450
+FORECAST_HORIZON = 12   
+CONF_INTERVAL = 0.10    
 
 # ==================================================
-# 2. กราฟพยากรณ์การเติบโต (Member Growth Forecast)
+# 1. Data Preprocessing & Cache
 # ==================================================
-def chart_growth_forecast(df):
-    if df.empty or 'registration_date' not in df.columns: return go.Figure()
+def preprocess_performance(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty: return df
+    if "income" in df.columns:
+        df["Income_Clean"] = (
+            df["income"].astype(str).str.replace(",", "")
+            .pipe(pd.to_numeric, errors="coerce").fillna(0)
+        )
+    if "registration_date" in df.columns:
+        df["reg_date"] = pd.to_datetime(df["registration_date"], errors="coerce")
+    return df
 
-    # --- เตรียมข้อมูลประวัติศาสตร์ ---
-    df['reg_date'] = pd.to_datetime(df['registration_date']).dt.to_period('M').dt.to_timestamp()
-    monthly_df = df.groupby('reg_date').size().reset_index(name='new_members')
-    monthly_df['cumulative_members'] = monthly_df['new_members'].cumsum()
-    
-    # --- การพยากรณ์ (Linear Forecast with Confidence Interval) ---
-    last_date = monthly_df['reg_date'].iloc[-1]
-    last_val = monthly_df['cumulative_members'].iloc[-1]
-    
-    # คำนวณอัตราการเติบโตเฉลี่ย 6 เดือนล่าสุด (ให้น้ำหนักเดือนล่าสุดมากกว่า)
-    recent_growth = monthly_df['new_members'].tail(6).tolist()
-    avg_growth = np.average(recent_growth, weights=[1, 2, 3, 4, 5, 6])
-    
-    # สร้างช่วงเวลาอนาคต 12 เดือน
-    future_dates = pd.date_range(start=last_date, periods=13, freq='MS')[1:]
-    forecast_vals = [last_val + (avg_growth * i) for i in range(1, 13)]
-    
-    # เชื่อมจุดล่าสุด
-    f_x = [last_date] + list(future_dates)
-    f_y = [last_val] + forecast_vals
-    
-    # คำนวณขอบเขตความเชื่อมั่น (Upper/Lower Bound +/- 15%)
-    upper_bound = [v * (1 + 0.15 * (i/12)) for i, v in enumerate(f_y)]
-    lower_bound = [v * (1 - 0.15 * (i/12)) for i, v in enumerate(f_y)]
+@lru_cache(maxsize=1)
+def load_performance_data():
+    return preprocess_performance(load_data())
+
+# ==================================================
+# 2. Chart Logic
+# ==================================================
+def chart_business_forecast(df, selected_year):
+    if df.empty or "reg_date" not in df.columns: return go.Figure()
+
+    dff = df.dropna(subset=["reg_date"]).copy()
+    dff["month"] = dff["reg_date"].dt.to_period("M").dt.to_timestamp()
+
+    monthly = dff.groupby("month")["Income_Clean"].sum().reset_index().sort_values("month")
+    monthly["cumulative"] = monthly["Income_Clean"].cumsum()
+
+    last_date = monthly["month"].iloc[-1]
+    last_val = monthly["cumulative"].iloc[-1]
+
+    recent_vals = monthly["Income_Clean"].tail(6).tolist()
+    weights = list(range(1, len(recent_vals) + 1))
+    avg_growth = np.average(recent_vals, weights=weights) if recent_vals else 0
+
+    future_dates = pd.date_range(start=last_date, periods=FORECAST_HORIZON + 1, freq="MS")[1:]
+    forecast_vals = [last_val + (avg_growth * i) for i in range(1, FORECAST_HORIZON + 1)]
+
+    f_x, f_y = [last_date] + list(future_dates), [last_val] + forecast_vals
+    upper = [v * (1 + CONF_INTERVAL * i/FORECAST_HORIZON) for i, v in enumerate(f_y)]
+    lower = [v * (1 - CONF_INTERVAL * i/FORECAST_HORIZON) for i, v in enumerate(f_y)]
 
     fig = go.Figure()
-
-    # 1. Confidence Interval (พื้นที่คาดการณ์)
-    fig.add_trace(go.Scatter(
-        x=f_x + f_x[::-1],
-        y=upper_bound + lower_bound[::-1],
-        fill='toself',
-        fillcolor='rgba(139, 92, 246, 0.1)',
-        line=dict(color='rgba(255,255,255,0)'),
-        hoverinfo="skip",
-        name='ช่วงความเชื่อมั่น (Confidence Range)',
-    ))
-
-    # 2. เส้นข้อมูลจริง (Actual Data)
-    fig.add_trace(go.Scatter(
-        x=monthly_df['reg_date'], 
-        y=monthly_df['cumulative_members'],
-        mode='lines',
-        name='ข้อมูลสมาชิกปัจจุบัน',
-        line=dict(color='#3b82f6', width=4, shape='spline'),
-        fill='tozeroy', 
-        fillcolor='rgba(59, 130, 246, 0.05)'
-    ))
+    fig.add_trace(go.Scatter(x=f_x + f_x[::-1], y=upper + lower[::-1], fill="toself", 
+                             fillcolor="rgba(16,185,129,0.10)", line=dict(color="rgba(0,0,0,0)"), name="ช่วงคาดการณ์เป้าหมาย"))
+    fig.add_trace(go.Scatter(x=monthly["month"], y=monthly["cumulative"], mode="lines+markers", 
+                             name="มูลค่าสะสมจริง", line=dict(color=THEME["success"], width=4)))
+    fig.add_trace(go.Scatter(x=f_x, y=f_y, mode="lines", name="แนวโน้ม 12 เดือนข้างหน้า", 
+                             line=dict(color=THEME["success"], dash="dash", width=3)))
     
-    # 3. เส้นพยากรณ์ (Forecast Line)
-    fig.add_trace(go.Scatter(
-        x=f_x, 
-        y=f_y,
-        mode='lines', 
-        name='พยากรณ์การเติบโต 12 เดือน',
-        line=dict(color='#8b5cf6', width=4, dash='dash', shape='spline')
-    ))
-
-    # เพิ่มจุดแยก (Vertical Line) ระหว่างปัจจุบันกับอนาคต
-    fig.add_vline(x=last_date, line_width=1, line_dash="dot", line_color="gray")
-    fig.add_annotation(x=last_date, y=last_val, text="จุดเริ่มพยากรณ์", 
-                       showarrow=True, arrowhead=1, yshift=10)
-
-    return chart_style(fig, "การคาดการณ์แนวโน้มจำนวนสมาชิกสะสม (Member Growth Forecast)")
+    fig.add_vline(x=last_date, line_dash="dot", line_color="#94a3b8")
+    fig.update_layout(height=CHART_HEIGHT, paper_bgcolor=THEME["paper"], plot_bgcolor=THEME["bg_plot"],
+                      font=dict(family="Sarabun, sans-serif", color=THEME["text"]), hovermode="x unified",
+                      legend=dict(orientation="h", x=0.5, xanchor="center", y=1.1), margin=dict(t=80, b=40, l=60, r=40))
+    fig.update_yaxes(gridcolor=THEME["grid"], tickformat=",.0f")
+    return fig
 
 # ==================================================
 # 3. Main Layout
 # ==================================================
-def create_performance_layout():
-    df = load_data()
-    if df.empty:
-        return dbc.Container(dbc.Alert("ไม่พบข้อมูลสำหรับการวิเคราะห์", color="danger", className="mt-5"))
+def performance_layout():
+    df = load_performance_data()
+    if df.empty: return dbc.Container(dbc.Alert("ไม่พบข้อมูล", color="danger"))
+    
+    available_years = sorted(df['reg_date'].dt.year.unique(), reverse=True)
 
-    # ล้างข้อมูลรายได้
-    if "income" in df.columns:
-        df["Income_Clean"] = pd.to_numeric(df["income"].astype(str).str.replace(",", ""), errors="coerce").fillna(0)
-
-    return dbc.Container(fluid=True, className="p-4", children=[
-        # ส่วนหัว Dashboard
+    return dbc.Container(fluid=True, style={"padding": "20px 30px", "maxWidth": "1400px"}, children=[
         html.Div([
-            html.H2("Performance & Growth Analysis", className="fw-bold", 
-                   style={"color": "#1e293b", "letterSpacing": "0.5px"}),
-            html.P("วิเคราะห์ประสิทธิภาพย้อนหลังและพยากรณ์การเติบโตด้วยโมเดลสถิติ", className="text-muted")
+            html.H3("การคาดการณ์แนวโน้มองค์กร", className="fw-bold mb-0"),
+            html.P("วิเคราะห์เป้าหมายธุรกิจจากฐานข้อมูลรายปี", className="text-muted")
         ], className="mb-4"),
 
-        # ส่วน KPI Cards (นำเข้าจากไฟล์ kpi_cards.py)
-        render_performance_kpis(df),
-
-        # กราฟพยากรณ์ขนาดใหญ่
-        dbc.Row([
-            dbc.Col(
-                dbc.Card(
-                    dbc.CardBody([
-                        dcc.Graph(figure=chart_growth_forecast(df), config={'displayModeBar': False})
-                    ]),
-                    className="shadow-lg border-0 rounded-4 overflow-hidden"
-                ), width=12
-            ),
-        ], className="mb-4"),
+        # ใช้ dcc.Loading คลุมเพื่อความลื่นไหลเวลาเปลี่ยนปี
+        dcc.Loading(id="loading-performance", type="circle", color=THEME["success"], children=[
+            html.Div(id='performance-content')
+        ]),
+        
+        # Dropdown ตัวแรกที่เป็นตัวจุดชนวน (Trigger) - ซ่อนไว้เพื่อรักษา State หรือใช้ร่วมกัน
+        dcc.Dropdown(id='year-selector', options=[{'label': f'ปี {y}', 'value': y} for y in available_years],
+                     value=available_years[0], style={'display': 'none'})
     ])
 
-# ตัวแปร layout สำหรับเรียกใช้ในหน้าหลัก
-layout = create_performance_layout()
+# ==================================================
+# 4. Callback
+# ==================================================
+@callback(
+    Output('performance-content', 'children'),
+    Input('year-selector', 'value')
+)
+def update_performance_dashboard(selected_year):
+    df = load_performance_data()
+    filtered_df = df[df['reg_date'].dt.year >= selected_year]
+    available_years = sorted(df['reg_date'].dt.year.unique(), reverse=True)
+
+    return [
+        render_performance_kpis(filtered_df), 
+        
+        dbc.Row([
+            dbc.Col(
+                html.Div([
+                    # --- ปุ่มเลือกปีแบบลอยตัว (ตำแหน่งที่คุณวงไว้) ---
+                    html.Div([
+                        html.Span("เลือกปีวิเคราะห์ย้อนหลัง:", className="me-2 small fw-bold", style={"color": "#666"}),
+                        dcc.Dropdown(
+                            id='year-selector', # ใช้ ID เดิมเพื่อให้ Callback วนลูปทำงานได้
+                            options=[{'label': str(y), 'value': y} for y in available_years],
+                            value=selected_year,
+                            clearable=False,
+                            style={'width': '110px', 'fontSize': '14px'}
+                        )
+                    ], style={
+                        "position": "absolute", "top": "20px", "right": "20px",
+                        "zIndex": "1000", "display": "flex", "alignItems": "center"
+                    }),
+
+                    # ตัวกราฟ
+                    chart_card(
+                        chart_business_forecast(filtered_df, selected_year),
+                        f"คาดการณ์แนวโน้มธุรกิจ (อ้างอิงฐานข้อมูลปี {selected_year})"
+                    )
+                ], style={"position": "relative"}), # ฐานสำหรับตำแหน่ง Absolute
+                width=12
+            )
+        ]),
+        html.Div([html.Small(f"* วิเคราะห์จากสถิติปี {selected_year}", className="text-muted")], className="text-end mt-2")
+    ]
+
+layout = performance_layout()

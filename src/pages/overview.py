@@ -53,7 +53,7 @@ def load_overview_data():
 # ==================================================
 # Layout Helper
 # ==================================================
-def apply_layout(fig, height=CHART_HEIGHT):
+def apply_overview_layout(fig, height=CHART_HEIGHT):
     fig.update_layout(
         height=height,
         margin=dict(t=30, b=20, l=30, r=30),
@@ -107,7 +107,7 @@ def chart_gender_pie(df):
         )
     )
 
-    return apply_layout(fig)
+    return apply_overview_layout(fig)
 
 
 def chart_branch_bar(df):
@@ -133,7 +133,7 @@ def chart_branch_bar(df):
     fig.update_yaxes(title="จำนวนสมาชิก", gridcolor=THEME["grid"])
     fig.update_xaxes(showgrid=False)
 
-    return apply_layout(fig)
+    return apply_overview_layout(fig)
 
 
 def chart_province_bar(df):
@@ -155,7 +155,7 @@ def chart_province_bar(df):
 
     fig.update_layout(showlegend=False)
 
-    return apply_layout(fig)
+    return apply_overview_layout(fig)
 
 
 def chart_income_funnel(df):
@@ -186,7 +186,7 @@ def chart_income_funnel(df):
 
     fig.update_layout(showlegend=False)
 
-    return apply_layout(fig)
+    return apply_overview_layout(fig)
 
 
 # ==================================================

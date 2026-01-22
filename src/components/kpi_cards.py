@@ -257,48 +257,9 @@ def render_address_kpis(df: pd.DataFrame) -> dbc.Row:
         dbc.Col(render_kpi_card("หมู่บ้านทั้งหมด", f"{n_village:,}", "หมู่บ้าน", "fa-tree-city", "red"), lg=3, md=6),
     ], className="g-3 mb-4")
 
+
 # ==================================================
-# 6. KPI Performance 
-# ==================================================
-def render_performance_kpis(df: pd.DataFrame) -> dbc.Row:
-    if df.empty:
-        return dbc.Alert("ไม่พบข้อมูลสำหรับการวิเคราะห์ประสิทธิภาพ", color="warning")
-
-    # เตรียมข้อมูลวันที่
-    temp_df = df.copy()
-    temp_df['reg_date'] = pd.to_datetime(temp_df['registration_date'], errors='coerce')
-    temp_df = temp_df.dropna(subset=['reg_date']).sort_values('reg_date')
-
-    # 1. Monthly Growth 6 เดือนล่าสุด
-    monthly_counts = temp_df.set_index('reg_date').resample('ME').size()
-    avg_growth_per_month = monthly_counts.tail(6).mean() if not monthly_counts.empty else 0
-    
-    # 2. คาดการณ์สมาชิกในอีก 12 เดือน
-    current_members = len(temp_df)
-    projected_12m = current_members + (avg_growth_per_month * 12)
-
-    # 3. Growth Rate (%) ปีต่อปี
-    current_year = pd.Timestamp.now().year
-    this_year_count = len(temp_df[temp_df['reg_date'].dt.year == current_year])
-    last_year_count = len(temp_df[temp_df['reg_date'].dt.year == current_year - 1])
-    
-    growth_rate = 0
-    if last_year_count > 0:
-        growth_rate = ((this_year_count - last_year_count) / last_year_count) * 100
-    
-    # 4. ประมาณการรายได้รวมในอนาคต
-    avg_income = temp_df["Income_Clean"].mean() if "Income_Clean" in temp_df.columns else 0
-    forecasted_income = projected_12m * avg_income
-
-    return dbc.Row([
-        dbc.Col(render_kpi_card("เป้าหมายสมาชิก (12 ด.)", f"{int(projected_12m):,}", "คน (Forecast)", "fa-chart-line", "primary"), lg=3, md=6),
-        dbc.Col(render_kpi_card("อัตราการเติบโตปีนี้", f"{growth_rate:+.1f}%", "เทียบปีที่แล้ว", "fa-arrow-up", "success"), lg=3, md=6),
-        dbc.Col(render_kpi_card("ประมาณการรายได้สะสม", f"{forecasted_income / 1_000_000:.1f}M", "บาท (Forecast)", "fa-coins", "purple"), lg=3, md=6),
-        dbc.Col(render_kpi_card("อัตราสมาชิกใหม่", f"{int(avg_growth_per_month)}", "คน / เดือน", "fa-user-plus", "info"), lg=3, md=6),
-    ], className="g-3 mb-4")
-    
-# ==================================================
-# 7. KPI Amount 
+# 6. KPI Amount 
 # ==================================================
 def render_amount_kpis(df: pd.DataFrame) -> dbc.Row:
     if df.empty:
@@ -342,3 +303,84 @@ def render_amount_kpis(df: pd.DataFrame) -> dbc.Row:
     ], className="g-3 mb-4")
 
 
+# ==================================================
+# 6. KPI : สรุปภาพรวมความเติบโตขององค์กร (เข้าใจง่าย)
+# ==================================================
+def render_performance_kpis(df: pd.DataFrame) -> dbc.Row:
+    if df.empty:
+        return dbc.Alert("ไม่พบข้อมูลสำหรับการวิเคราะห์", color="warning")
+
+    temp_df = df.copy()
+    temp_df['reg_date'] = pd.to_datetime(temp_df['registration_date'], errors='coerce')
+    temp_df = temp_df.dropna(subset=['reg_date']).sort_values('reg_date')
+
+    # 1. ยอดสมาชิกใหม่เฉลี่ย (ดูย้อนหลัง 6 เดือน)
+    monthly_new = temp_df.set_index('reg_date').resample('ME').size()
+    avg_monthly_new = monthly_new.tail(6).mean() if not monthly_new.empty else 0
+
+    # 2. เป้าหมายจำนวนสมาชิกในอีก 1 ปีข้างหน้า
+    current_total = len(temp_df)
+    target_next_year = current_total + (avg_monthly_new * 12)
+
+    # 3. ความเร็วในการเติบโตปีนี้ เทียบกับปีที่แล้ว
+    current_year = pd.Timestamp.now().year
+    count_this_year = len(temp_df[temp_df['reg_date'].dt.year == current_year])
+    count_last_year = len(temp_df[temp_df['reg_date'].dt.year == current_year - 1])
+
+    growth_pct = 0
+    if count_last_year > 0:
+        growth_pct = ((count_this_year - count_last_year) / count_last_year) * 100
+
+    # 4. มูลค่าธุรกิจรวมที่คาดหวัง (ยอดเงินสะสม)
+    avg_income = temp_df["Income_Clean"].mean() if "Income_Clean" in temp_df.columns else 0
+    total_value_forecast = target_next_year * avg_income
+
+    return dbc.Row(
+        [
+            # การขยายตัว
+            dbc.Col(
+                render_kpi_card(
+                    "เป้าหมายสมาชิกปีหน้า",
+                    f"{int(target_next_year):,}",
+                    "คน (คาดการณ์ 12 เดือน)",
+                    "fa-bullseye",
+                    "primary",
+                ),
+                lg=3, md=6,
+            ),
+            # ความเร็ว
+            dbc.Col(
+                render_kpi_card(
+                    "ความเร็วการโตปีนี้",
+                    f"{growth_pct:+.1f}%",
+                    "เทียบกับปีที่ผ่านมา",
+                    "fa-rocket",
+                    "success",
+                ),
+                lg=3, md=6,
+            ),
+            # เม็ดเงิน
+            dbc.Col(
+                render_kpi_card(
+                    "มูลค่าธุรกิจที่คาดหวัง",
+                    f"{total_value_forecast / 1_000_000:.1f} ล้าน",
+                    "บาท (เมื่อถึงเป้าหมาย)",
+                    "fa-sack-dollar",
+                    "purple",
+                ),
+                lg=3, md=6,
+            ),
+            # งานประจำเดือน
+            dbc.Col(
+                render_kpi_card(
+                    "สมาชิกใหม่เฉลี่ย",
+                    f"{int(avg_monthly_new)}",
+                    "คน / เดือน",
+                    "fa-user-plus",
+                    "info",
+                ),
+                lg=3, md=6,
+            ),
+        ],
+        className="g-3 mb-4",
+    )

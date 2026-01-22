@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 import pandas as pd
 from functools import lru_cache
 
+
 from ..data_manager import load_data
 from ..components.kpi_cards import render_member_kpis
 
@@ -69,7 +70,7 @@ def load_member_data():
 # ==================================================
 # Layout Helper
 # ==================================================
-def apply_layout(fig, height=CHART_HEIGHT):
+def apply_member_layout(fig, height=CHART_HEIGHT):
     fig.update_layout(
         height=height,
         margin=dict(t=20, b=40, l=40, r=30),
@@ -120,7 +121,7 @@ def chart_growth_time(df):
         yaxis=dict(showgrid=True),
     )
 
-    return apply_layout(fig, height=380)
+    return apply_member_layout(fig, height=380)
 
 
 def chart_gender_career(df):
@@ -143,7 +144,7 @@ def chart_gender_career(df):
     )
 
     fig.update_layout(legend=dict(orientation="h", y=-0.25))
-    return apply_layout(fig)
+    return apply_member_layout(fig)
 
 
 def chart_income_pie(df):
@@ -157,7 +158,7 @@ def chart_income_pie(df):
     )
 
     fig.update_layout(legend=dict(orientation="h", y=-0.15))
-    return apply_layout(fig)
+    return apply_member_layout(fig)
 
 
 def chart_gen_area(df):
@@ -188,7 +189,7 @@ def chart_gen_area(df):
         yaxis=dict(title="จำนวน (คน)"),
     )
 
-    return apply_layout(fig)
+    return apply_member_layout(fig)
 
 
 def chart_monthly_members(df):
@@ -218,7 +219,7 @@ def chart_monthly_members(df):
     )
 
     fig.update_layout(showlegend=False)
-    return apply_layout(fig)
+    return apply_member_layout(fig)
 
 
 # ==================================================
