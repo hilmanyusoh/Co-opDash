@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 # Import หน้าที่จำเป็น
 from .components.sidebar import render_sidebar
 from .pages import overview  
+from .pages import creditscore
 from .pages import member 
 from .pages import branches 
 from .pages import address
@@ -51,6 +52,9 @@ def render_page_content(pathname):
 
     if pathname == "/" or pathname == "/overview":
         return overview.layout
+    
+    elif pathname == "/credit-score":
+        return creditscore.layout
 
     elif pathname == "/member":
         return member.layout
@@ -81,6 +85,10 @@ def render_page_content(pathname):
 # Callbacks ของแต่ละ Page
 if hasattr(overview, 'register_callbacks'):
     overview.register_callbacks(app)
+
+if hasattr(creditscore, 'register_callbacks'):
+    creditscore.register_callbacks(app)    
+    
 if hasattr(member, 'register_callbacks'):
     member.register_callbacks(app)
 

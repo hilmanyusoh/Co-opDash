@@ -55,7 +55,7 @@ def render_sidebar():
             ),
             html.Hr(className="my-3"),
             
-            # 1. ข้อมูลภาพรวม (ไม่มีเมนูย่อย)
+            # 1. ข้อมูลภาพรวม
             render_single_nav("ข้อมูลภาพรวม", "/overview", "fa-gauge-high"),
 
             # 2. สมาชิก (Accordion)
@@ -63,14 +63,13 @@ def render_sidebar():
                 [
                     dbc.AccordionItem(
                         dbc.Nav(
-                            [
+                            [ 
+                                
                                 render_sub_nav("ข้อมูลสมาชิก", "/member", "fa-user-group"),
                                 render_sub_nav("ข้อมูลสาขา", "/branches", "fa-building-columns"),
                                 render_sub_nav("ข้อมูลเชิงพื้นที่", "/address", "fa-map-location-dot"),
-                                render_sub_nav("ข้อมูลการเงิน","/amount",
-                                    "fa-sack-dollar"),
+                                render_sub_nav("ข้อมูลการเงิน", "/amount", "fa-sack-dollar"),
                             ],
-
                             vertical=True, 
                             pills=True
                         ),
@@ -84,35 +83,14 @@ def render_sidebar():
                 flush=True, 
                 start_collapsed=True, 
                 className="mb-1 border-0",
-                # ปรับสไตล์ให้ Accordion ดูสะอาด
                 style={"--bs-accordion-bg": "transparent", "--bs-accordion-border-color": "transparent"}
             ),
 
-            # 4. Performance (ไม่มีเมนูย่อย)
+            render_sub_nav("คำนวณ Credit Score", "/credit-score", "fa-star-half-stroke"),
+            # 4. Performance
             render_single_nav("การคาดการณ์", "/performance", "fa-chart-line"),
+            
 
-            # html.Div(
-            #     [
-            #         html.Hr(className="my-3"),
-            #         html.Small(
-            #             [
-            #                 html.I(className="fas fa-clock me-2"),
-            #                 f"อัปเดต: {current_time}"
-            #             ],
-            #             className="text-muted text-center d-block mb-1",
-            #         ),
-            #         html.Small(
-            #             [html.I(className="fas fa-shield-halved me-2"), "v1.2.0"],
-            #             className="text-muted text-center d-block",
-            #         ),
-            #     ],
-            #     style={
-            #         "position": "absolute",
-            #         "bottom": "15px",
-            #         "left": "1rem",
-            #         "right": "1rem",
-            #     },  
-            # ),
         ],
         style=SIDEBAR_STYLE,
         id="sidebar",
