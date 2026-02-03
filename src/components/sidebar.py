@@ -1,13 +1,9 @@
 from dash import html
 import dash_bootstrap_components as dbc
-import datetime
 
-# Sidebar Style
 SIDEBAR_STYLE = {
     "position": "fixed",
-    "top": 0,
-    "left": 0,
-    "bottom": 0,
+    "top": 0, "left": 0, "bottom": 0,
     "width": "285px",
     "padding": "1rem",
     "background-color": "#ffffff",
@@ -16,81 +12,96 @@ SIDEBAR_STYLE = {
     "z-index": 1000,
 }
 
-# ส่วนประกอบเมนูเดี่ยว (Overview / Performance)
 def render_single_nav(label, href, icon):
-    return dbc.NavLink(
-        [
-            html.I(className=f"fas {icon} me-3", style={"width": "20px"}),
-            html.Span(label, className="fw-medium"),
-        ],
-        href=href,
-        active="exact",
-        className="py-3 px-3 mb-1 text-dark",
-        style={"borderRadius": "8px", "fontSize": "1rem", "display": "flex", "alignItems": "center"}
+    return html.Div(
+        dbc.NavLink(
+            [
+                html.I(className=f"fas {icon} me-3", style={"width": "20px"}),
+                html.Span(label, className="fw-medium"),
+            ],
+            href=href,
+            active="exact",
+            className="py-3 px-3 mb-1",
+            style={
+                "borderRadius": "8px", 
+                "fontSize": "1rem",  
+                "display": "flex",
+                "alignItems": "center",
+                "color": "black"  # ตัวหนังสือปกติสีดำ
+            }
+        ),
+        className="nav-main"
     )
 
-# ส่วนประกอบเมนูย่อย (ภายใน Accordion)
 def render_sub_nav(label, href, icon):
-    return dbc.NavLink(
-        [
-            html.I(className=f"fas {icon} me-3", style={"width": "20px", "opacity": "0.7"}),
-            html.Span(label),
-        ],
-        href=href,
-        active="exact",
-        className="py-2 px-3 mb-1",
-        style={"borderRadius": "8px", "fontSize": "0.92rem"}
+    return html.Div(
+        dbc.NavLink(
+            [
+                html.I(className=f"fas {icon} me-3", style={"width": "20px", "opacity": "0.7"}),
+                html.Span(label),
+            ],
+            href=href,
+            active="exact",
+            className="py-2 px-3 mb-1",
+            # เมนูย่อยใช้ CSS ควบคุมสีขาวเมื่อ Active (ผ่านไฟล์ style.css)
+        ),
+        className="nav-sub"
     )
 
 def render_sidebar():
-    current_time = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
-
     return html.Div(
-        [ # Header
-            html.Div(
-                [
-                    html.H4("I-Corp Dash", className="text-primary fw-bold mb-0"),
-                ],
-                className="text-center mb-3",
-            ),
+        [
+            # Header
+            html.Div([
+                html.H4("I-Corp Dash", className="text-primary fw-bold mb-0"),
+            ], className="text-center mb-3 mt-2"),
             html.Hr(className="my-3"),
             
-            # 1. ข้อมูลภาพรวม
-            render_single_nav("ข้อมูลภาพรวม", "/overview", "fa-gauge-high"),
-
-            # 2. สมาชิก (Accordion)
-            dbc.Accordion(
+            dbc.Nav(
                 [
-                    dbc.AccordionItem(
-                        dbc.Nav(
-                            [ 
-                                
-                                render_sub_nav("ข้อมูลสมาชิก", "/member", "fa-user-group"),
-                                render_sub_nav("ข้อมูลสาขา", "/branches", "fa-building-columns"),
-                                render_sub_nav("ข้อมูลเชิงพื้นที่", "/address", "fa-map-location-dot"),
-                                render_sub_nav("ข้อมูลการเงิน", "/amount", "fa-sack-dollar"),
-                            ],
-                            vertical=True, 
-                            pills=True
-                        ),
-                        title=html.Span([
-                            html.I(className="fas fa-users me-3", style={"width": "20px"}), 
-                            "สมาชิก"
-                        ], className="fw-medium"),
-                        item_id="acc_members",
+                    render_single_nav("ข้อมูลภาพรวม", "/overview", "fa-gauge-high"),
+
+                    # Accordion: สมาชิก (ปรับแต่งให้เหมือนเมนูหลัก)
+                    dbc.Accordion(
+                        [
+                            dbc.AccordionItem(
+                                children=dbc.Nav(
+                                    [ 
+                                        render_sub_nav("ข้อมูลสมาชิก", "/member", "fa-user-group"),
+                                        render_sub_nav("ข้อมูลสาขา", "/branches", "fa-building-columns"),
+                                        render_sub_nav("ข้อมูลเชิงพื้นที่", "/address", "fa-map-location-dot"),
+                                        render_sub_nav("ข้อมูลการเงิน", "/amount", "fa-sack-dollar"),
+                                    ],
+                                    vertical=True, pills=True
+                                ),
+                                # แก้ไข title ตรงนี้ให้เป็นสีดำ
+                                title=html.Span([
+                                    html.I(className="fas fa-users me-3", style={"width": "20px", "color": "black"}), 
+                                    html.Span("สมาชิก", style={"color": "black"})
+                                ], className="fw-medium d-flex align-items-center"),
+                                item_id="acc_members",
+                            ),
+                        ],
+                        flush=True, 
+                        start_collapsed=True,
+                        className="mb-1 border-0",
+                        # ล้างค่าสีฟ้ามาตรฐานของ Bootstrap Accordion
+                        style={
+                            "--bs-accordion-btn-color": "black",
+                            "--bs-accordion-active-color": "black",
+                            "--bs-accordion-active-bg": "#f8fafc", # พื้นหลังเทาจางๆ เมื่อกางออก
+                            "--bs-accordion-btn-focus-box-shadow": "none",
+                            "--bs-accordion-border-color": "transparent",
+                        }
                     ),
+
+                    render_single_nav("การคำนวณเครดิต", "/credit-score", "fa-calculator"),
+                    render_single_nav("การคาดการณ์", "/performance", "fa-chart-line"),
                 ],
-                flush=True, 
-                start_collapsed=True, 
-                className="mb-1 border-0",
-                style={"--bs-accordion-bg": "transparent", "--bs-accordion-border-color": "transparent"}
+                vertical=True, 
+                pills=True,
+                className="w-100"
             ),
-
-            render_sub_nav("คำนวณ Credit Score", "/credit-score", "fa-star-half-stroke"),
-            # 4. Performance
-            render_single_nav("การคาดการณ์", "/performance", "fa-chart-line"),
-            
-
         ],
         style=SIDEBAR_STYLE,
         id="sidebar",

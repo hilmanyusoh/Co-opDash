@@ -40,7 +40,7 @@ CONTENT_STYLE = {
 
 app.layout = html.Div(
     [
-        dcc.Location(id="url", refresh=False),
+        dcc.Location(id="url", refresh=False, pathname="/overview"),
         render_sidebar(),
         html.Div(id="page-content", style=CONTENT_STYLE),
     ]

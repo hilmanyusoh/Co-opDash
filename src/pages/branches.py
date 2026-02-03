@@ -197,11 +197,11 @@ def branch_layout():
             render_branch_kpis(df),
             dbc.Row([
                 dbc.Col(chart_card(chart_member_column(df), "จำนวนสมาชิกแต่ละสาขา"), lg=6),
-                dbc.Col(chart_card(chart_income_line(df), "รายได้เฉลี่ยต่อคน"), lg=6),
+                dbc.Col(chart_card(chart_income_line(df), "รายได้เฉลี่ยต่อคนในแต่ละสาขา"), lg=6),
             ], className="g-3 mb-3"),
             dbc.Row([
-                dbc.Col(chart_card(chart_approval_mode(df), "ระยะเวลาอนุมัติที่พบบ่อย"), lg=6),
-                dbc.Col(chart_card(chart_member_income_dual(df), "จำนวนสมาชิก vs รายได้รวม"), lg=6),
+                dbc.Col(chart_card(chart_approval_mode(df), "ระยะเวลาการอนุมัติของแต่ละสาขา"), lg=6),
+                dbc.Col(chart_card(chart_member_income_dual(df), "รายได้รวมของสมาชิกในแต่ละสาขา"), lg=6),
             ], className="g-3"),
         ],
     )

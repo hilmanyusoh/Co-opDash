@@ -142,7 +142,7 @@ def address_layout():
                                     config={"displayModeBar": False},
                                     style={"height": f"{CHART_HEIGHT}px"} 
                                 ),
-                                title="สัดส่วนสมาชิกแยกตามจังหวัด"
+                                title="จำนวนสมาชิกตามจังหวัด"
                             )
                         ])
                     ], style={"position": "relative"}) 

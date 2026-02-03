@@ -69,28 +69,35 @@ def get_full_member_data(national_id: str):
         return None
 
 def get_member_profile(national_id: str):
-    """ฟังก์ชันหลักสำหรับหน้า UI: ดึงข้อมูลและคำนวณคะแนนทันทีหากยังไม่มี"""
     data = get_full_member_data(national_id)
-    
-    if not data:
-        return None
+    if not data: return None
 
-    # ตรวจสอบว่าต้องคำนวณใหม่หรือไม่ (ถ้าไม่มีคะแนนใน DB)
-    if data.get('credit_score') == "-" or data.get('credit_score') is None:
+    # 1. เช็คว่ามีคะแนนอยู่แล้วใน DB หรือไม่
+    # ระวัง: get_full_member_data คืนค่าเป็น "-" ถ้าว่าง
+    current_score = data.get('credit_score')
+    
+    if current_score == "-" or current_score is None:
         try:
             calculator = CreditScoreCalculator()
             
-            # เตรียมข้อมูลดิบ (แปลง "-" เป็น 0 หรือค่าที่เหมาะสมสำหรับการคำนวณ)
+            # 2. สร้าง Dictionary ใหม่สำหรับคำนวณโดยเฉพาะ (ห้ามใช้ค่าที่เป็น String "-")
             calc_input = {}
             for k, v in data.items():
                 if v == "-":
-                    # กำหนด Default สำหรับตัวแปรสำคัญ
-                    if k == 'payment_performance_pct': calc_input[k] = 100
+                    # เติมค่า Default ที่เป็นกลางที่สุด (หรือไม่ส่งไปเลยเพื่อให้ Logic ใช้ Default ของมันเอง)
+                    if k == 'payment_performance_pct': calc_input[k] = 100.0
+                    elif k in ['credit_utilization_rate']: calc_input[k] = 0.0
                     else: calc_input[k] = 0
                 else:
-                    calc_input[k] = v
+                    # พยายามแปลงเป็นตัวเลขถ้าทำได้
+                    try:
+                        calc_input[k] = float(v) if not isinstance(v, str) else v
+                    except:
+                        calc_input[k] = v
             
-            # 🛠️ เรียกใช้ฟังก์ชัน .calculate_all() ให้ตรงกับใน scoring_logic.py
+            # 🚀 ลอง Print ดูที่นี่ว่าค่าที่ส่งไปคำนวณของกลุ่ม GG เป็น 0 หรือ 100 หมดไหม
+            # print(f"DEBUG INPUT FOR {data['customer_id']}: {calc_input}")
+
             result = calculator.calculate_all(calc_input)
             
             # อัปเดตข้อมูลที่จะส่งคืนให้ UI
@@ -100,14 +107,12 @@ def get_member_profile(national_id: str):
                 'score_breakdown': result.get('breakdown', {})
             })
             
-            # บันทึกคะแนนลง Database อัตโนมัติ
             _save_calculated_score(data['customer_id'], result)
             
         except Exception as e:
             print(f"[ERROR] การคำนวณคะแนนล้มเหลว: {e}")
             
     return data
-
 def _save_calculated_score(customer_id, result):
     """บันทึกผลการคำนวณลงฐานข้อมูล (ใช้ท่า Upsert เพื่อความชัวร์)"""
     engine = get_pg_engine()
@@ -169,31 +174,34 @@ def load_data() -> pd.DataFrame:
     try:
         query = """
         SELECT 
-            m.*, c.career_name, b.branch_no, g.gender_name, p.province_name
-        FROM members m
+            m.*, 
+            a.net_yearly_income,
+            a.yearly_debt_payments,
+            a.credit_limit,
+            a.credit_limit_used_pct,
+            -- คำนวณสถานะหนี้เสียเบื้องต้น (เช่น ใช้เกิน 95% ของวงเงิน)
+            CASE WHEN a.credit_limit_used_pct > 95 THEN 1 ELSE 0 END as is_npl,
+            c.career_name, 
+            b.branch_no, 
+            g.gender_name, 
+            p.province_name
+        FROM (
+            SELECT *, ROW_NUMBER() OVER (ORDER BY member_id) AS rn FROM members
+        ) m
+        INNER JOIN (
+            SELECT *, ROW_NUMBER() OVER (ORDER BY amount_id) AS rn FROM amount
+        ) a ON m.rn = a.rn
         LEFT JOIN careers c   ON m.career_id = c.career_id
         LEFT JOIN branches b  ON m.branch_id = b.branch_id
         LEFT JOIN gender g    ON m.gender_id = g.gender_id
-        LEFT JOIN addresses a ON m.member_id = a.member_id  
-        LEFT JOIN provinces p ON a.province_id = p.province_id
+        LEFT JOIN addresses a_addr ON m.member_id = a_addr.member_id  
+        LEFT JOIN provinces p ON a_addr.province_id = p.province_id
         """
         with engine.connect() as conn:
-            df = pd.read_sql(query, conn)
+            df = pd.read_sql(text(query), conn)
     except SQLAlchemyError as e:
         print(f"[ERROR] load_data: {e}")
         return pd.DataFrame()
-
-    if df.empty: return df
-
-    if "birthday" in df.columns:
-        df["Age"] = df["birthday"].apply(calculate_age_from_dob)
-        df["Age_Group"] = pd.cut(df["Age"], bins=[0, 20, 30, 40, 50, 60, 120],
-                                 labels=["<20", "20-29", "30-39", "40-49", "50-59", "60+"])
-
-    # สร้างคอลัมน์หลอกเพื่อป้องกัน Error ในหน้า Dashboard หาก DB ยังไม่มี
-    for col in ['credit_limit', 'credit_limit_used_pct', 'yearly_debt_payments']:
-        if col not in df.columns:
-            df[col] = 0
 
     return df
 

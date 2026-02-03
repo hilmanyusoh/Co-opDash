@@ -51,3 +51,24 @@ body {
 #sidebar small {
     font-size: 11px;
 }
+
+
+/* เมนูหลัก Active: ตัวหนังสือดำ + ขีดฟ้า */
+.nav-main .nav-link.active {
+    background-color: #f8fafc !important;
+    border-left: 4px solid #4A89DC !important;
+    color: black !important;
+    border-radius: 0 8px 8px 0 !important; /* มนเฉพาะฝั่งขวาเพื่อให้เส้น Border สวย */
+}
+
+/* เมนูสมาชิก (Accordion) เมื่อกางออก: ให้มีขีดฟ้าเหมือนเมนูหลัก */
+#sidebar .accordion-button:not(.collapsed) {
+    border-left: 4px solid #4A89DC !important;
+    border-radius: 0 8px 8px 0 !important;
+}
+
+/* เมนูย่อย Active: พื้นหลังฟ้า + ตัวหนังสือขาว */
+.nav-sub .nav-link.active {
+    background-color: #4A89DC !important;
+    color: white !important;
+}

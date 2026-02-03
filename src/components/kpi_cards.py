@@ -263,45 +263,61 @@ def render_address_kpis(df: pd.DataFrame) -> dbc.Row:
 # ==================================================
 def render_amount_kpis(df: pd.DataFrame) -> dbc.Row:
     if df.empty:
-        return dbc.Alert("ไม่พบข้อมูลสำหรับการวิเคราะห์สินเชื่อ", color="warning")
+        return dbc.Alert("ยังไม่มีข้อมูลทางการเงิน", color="warning")
 
-    # 1. ยอดสินเชื่อคงค้างรวม (Total Outstanding)
-    # คำนวณจาก (วงเงิน * % ที่ใช้ไป)
-    outstanding = (df['credit_limit'] * df['credit_limit_used_pct'] / 100).sum()
+    # 1. ยอดรวมที่ลูกหนี้ค้างเราทั้งหมด
+    total_debt = (df['credit_limit'] * df['credit_limit_used_pct'] / 100).sum()
 
-    # 2. % หนี้เสีย (NPL Estimate) 
-    # สมมติฐาน: คนที่ใช้เครดิตเกิน 95% มีโอกาสเป็นหนี้เสียสูง
-    npl_count = len(df[df['credit_limit_used_pct'] > 95])
-    npl_rate = (npl_count / len(df)) * 100 if len(df) > 0 else 0
-
-    # 3. ยอดปล่อยใหม่ (MTD - Month to Date)
-    # อ้างอิงจากรายได้ของสมาชิกใหม่ในเดือนล่าสุดที่สมัครเข้ามา
-    mtd_new_loan = 0
+    # 2. ลูกค้ากลุ่มเสี่ยง (ใช้เงินเกือบเต็มวงเงิน)
+    risky_count = len(df[df['credit_limit_used_pct'] > 95])
+    # เปลี่ยนจาก % เป็น "จำนวนคน" จะทำให้เจ้าของรู้สึกต้องรีบจัดการมากกว่า
+    
+    # 3. ยอดที่เพิ่งจ่ายออก (โอนกู้ใหม่) เดือนนี้
+    new_disbursement = 0
     if 'registration_date' in df.columns:
         df['registration_date'] = pd.to_datetime(df['registration_date'])
-        latest_date = df['registration_date'].max()
-        new_members = df[
-            (df['registration_date'].dt.month == latest_date.month) & 
-            (df['registration_date'].dt.year == latest_date.year)
-        ]
-        # ยอดปล่อยใหม่ประมาณการจาก Credit Limit ของสมาชิกใหม่
-        mtd_new_loan = new_members['credit_limit'].sum()
+        latest = df['registration_date'].max()
+        new_disbursement = df[
+            (df['registration_date'].dt.month == latest.month) & 
+            (df['registration_date'].dt.year == latest.year)
+        ]['credit_limit'].sum()
 
-    # 4. เป้าหมายจัดเก็บ (Collection Target)
-    # รายเดือนจากภาระหนี้รายปี
-    monthly_collection_target = df['yearly_debt_payments'].sum() / 12
+    # 4. เป้าหมายที่ต้องตามเก็บให้ได้เดือนนี้
+    collection_target = df['yearly_debt_payments'].sum() / 12
 
-    def format_m(val):
-        if val >= 1_000_000: return f"฿{val/1_000_000:.2f}M"
-        return f"฿{val:,.0f}"
+    def format_baht(val):
+        if val >= 1_000_000: return f"{val/1_000_000:.2f} ล้าน"
+        return f"{val:,.0f}"
 
     return dbc.Row([
-        dbc.Col(render_kpi_card("เงินทุนที่อยู่ในมือลูกค้า", format_m(outstanding), "ยอดรวมปัจจุบัน", "fa-hand-holding-dollar", "primary"), lg=3, md=6),
-        dbc.Col(render_kpi_card("หนี้เสีย", f"{npl_rate:.1f}%", "ความเสี่ยงสูง", "fa-user-slash", "danger"), lg=3, md=6),
-        dbc.Col(render_kpi_card("เงินกู้ที่บริษัทโอนให้ลูกค้า", format_m(mtd_new_loan), "ในเดือนปัจจุบัน", "fa-file-invoice-dollar", "info"), lg=3, md=6),
-        dbc.Col(render_kpi_card("เดือนนี้ต้องเก็บเงิน", format_m(monthly_collection_target), "ต่อเดือน", "fa-calendar-check", "success"), lg=3, md=6),
+        dbc.Col(render_kpi_card(
+            "เงินค้างในมือลูกค้า", 
+            format_baht(total_debt), 
+            "ยอดลูกหนี้รวมทั้งหมด", 
+            "fa-sack-dollar", "primary"
+        ), lg=3, md=6),
+        
+        dbc.Col(render_kpi_card(
+            "ลูกค้ากลุ่มเสี่ยง", 
+            f"{risky_count} ราย", 
+            "ต้องติดตามเป็นพิเศษ", 
+            "fa-triangle-exclamation", "danger"
+        ), lg=3, md=6),
+        
+        dbc.Col(render_kpi_card(
+            "ยอดปล่อยกู้เดือนนี้", 
+            format_baht(new_disbursement), 
+            "เงินโอนออกให้ลูกค้าใหม่", 
+            "fa-money-bill-transfer", "info"
+        ), lg=3, md=6),
+        
+        dbc.Col(render_kpi_card(
+            "เป้าเก็บเงินเดือนนี้", 
+            format_baht(collection_target), 
+            "ยอดชำระที่ต้องตามเก็บ", 
+            "fa-calendar-check", "success"
+        ), lg=3, md=6),
     ], className="g-3 mb-4")
-
 
 # ==================================================
 # 6. KPI : สรุปภาพรวมความเติบโตขององค์กร 
