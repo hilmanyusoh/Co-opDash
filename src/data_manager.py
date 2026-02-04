@@ -42,13 +42,11 @@ def get_full_member_data(national_id: str):
             # ดึงข้อมูลจากทุกตารางที่เกี่ยวข้องกับการคำนวณ (Customers, Accounts, History, Summary)
             query = text("""
                 SELECT 
-                    c.*, 
-                    a.account_number, a.monthly_payment, a.account_status,
-                    h.payment_performance_pct, h.installments_overdue, 
-                    h.late_payment_count_12m, h.late_payment_count_24m,
-                    s.credit_utilization_rate, s.total_accounts, s.active_accounts, 
-                    s.oldest_account_months, s.inquiries_6m, s.inquiries_12m,
-                    sc.credit_score, sc.credit_rating
+                    c.*,  -- ข้อมูลส่วนบุคคล (ชื่อ, อายุ, เพศ, การศึกษา, อาชีพ, รายได้ ฯลฯ)
+                    a.*,  -- รายละเอียดสินเชื่อ (เลขบัญชี, ประเภทสินเชื่อ, ยอดหนี้, สถานะบัญชี)
+                    h.*,  -- ประวัติการชำระ (Payment Performance, งวดค้างชำระ)
+                    s.*,  -- พฤติกรรมเครดิต (Credit Utilization, จำนวนบัญชีทั้งหมด)
+                    sc.credit_score, sc.credit_rating, sc.risk_category, sc.score_range
                 FROM credit_scoring.customers c
                 LEFT JOIN credit_scoring.credit_accounts a ON c.customer_id = a.customer_id
                 LEFT JOIN credit_scoring.payment_history h ON c.customer_id = h.customer_id
@@ -120,23 +118,31 @@ def _save_calculated_score(customer_id, result):
         print("❌ ไม่สามารถเชื่อมต่อ Database Engine ได้")
         return
     
-    # 1. เตรียมค่าที่จะบันทึก (คำนวณจาก result ที่ส่งมาจาก scoring_logic)
+    # 1. เตรียมค่าที่จะบันทึก
     score = result.get('credit_score', 0)
     rating = result.get('credit_rating', 'N/A')
     
-    # กำหนด Risk Category ตามคะแนน
+    # --- 🟢 จุดที่ต้องเพิ่มกลับเข้าไป: กำหนด Risk Category ตามคะแนน ---
     if score >= 750:
-        risk_cat = 'Low Risk'
+        risk_cat = 'ความเสี่ยงต่ำ'
     elif score >= 650:
-        risk_cat = 'Medium Risk'
+        risk_cat = 'ความเสี่ยงปานกลาง'
     else:
-        risk_cat = 'High Risk'
-        
-    score_range = "300-900" # ช่วงคะแนนมาตรฐาน
+        risk_cat = 'ความเสี่ยงสูง'
+    # -------------------------------------------------------
+
+    # กำหนดช่วงคะแนนตาม Rating (แก้ไขปัญหา 300-900 ที่เจอใน DBeaver)
+    range_map = {
+        'AA': '753-900',
+        'BB': '725-752',
+        'CC': '616-724',
+        'HH': '300-615',
+        'FF': '300-900' 
+    }
+    score_range = range_map.get(rating, "300-900")
 
     try:
         with engine.begin() as conn:
-            # 2. ใช้ SQL แบบ ON CONFLICT เพื่อให้ระบบบันทึกทับคนเดิมได้
             save_sql = text("""
                 INSERT INTO credit_scoring.credit_scores 
                 (customer_id, credit_score, credit_rating, score_range, risk_category, last_update_date)
@@ -155,17 +161,14 @@ def _save_calculated_score(customer_id, result):
                 "score": score, 
                 "rating": rating,
                 "s_range": score_range,
-                "risk": risk_cat
+                "risk": risk_cat # ตอนนี้ risk_cat มีค่าแล้ว จะไม่ Error
             })
             print(f"✅ บันทึกข้อมูลสำเร็จ: {customer_id} | Score: {score} | Risk: {risk_cat}")
-            
+
     except Exception as e:
-        # ถ้ายังไม่ได้อีก ตัวนี้จะบอกว่าติดที่คอลัมน์ไหน
         print(f"❌ เกิดข้อผิดพลาดตอนบันทึก: {str(e)}")
 
-# ==================================================
-# ส่วนจัดการหน้า Overview Dashboard
-# ==================================================
+
 
 def load_data() -> pd.DataFrame:
     engine = get_pg_engine()
@@ -184,7 +187,10 @@ def load_data() -> pd.DataFrame:
             c.career_name, 
             b.branch_no, 
             g.gender_name, 
-            p.province_name
+            p.province_name,
+            a_addr.district as district_name,
+            a_addr.subdistrict as subdistrict_name,
+            a_addr.moo as village_moo
         FROM (
             SELECT *, ROW_NUMBER() OVER (ORDER BY member_id) AS rn FROM members
         ) m
@@ -194,7 +200,7 @@ def load_data() -> pd.DataFrame:
         LEFT JOIN careers c   ON m.career_id = c.career_id
         LEFT JOIN branches b  ON m.branch_id = b.branch_id
         LEFT JOIN gender g    ON m.gender_id = g.gender_id
-        LEFT JOIN addresses a_addr ON m.member_id = a_addr.member_id  
+        LEFT JOIN addresses a_addr ON m.member_id = a_addr.member_id
         LEFT JOIN provinces p ON a_addr.province_id = p.province_id
         """
         with engine.connect() as conn:

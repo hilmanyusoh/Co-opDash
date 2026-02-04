@@ -244,11 +244,21 @@ def render_address_kpis(df: pd.DataFrame) -> dbc.Row:
     if df.empty:
         return dbc.Alert("ไม่พบข้อมูลที่อยู่", color="warning", className="text-center")
 
-    # คำนวณ Unique values โดยใช้ชื่อคอลัมน์จริงจาก SQL JOIN
+    # 1. จังหวัด: นับจากชื่อจังหวัด
     n_province = df['province_name'].nunique() if 'province_name' in df.columns else 0
-    n_district = df['district_area'].nunique() if 'district_area' in df.columns else 0
-    n_subdistrict = df['sub_area'].nunique() if 'sub_area' in df.columns else 0
-    n_village = df['village_no'].nunique() if 'village_no' in df.columns else 0
+    
+    # 2. อำเภอ: นับจาก district_name ที่ดึงมาจาก a_addr.district
+    n_district = df['district_name'].nunique() if 'district_name' in df.columns else 0
+    
+    # 3. ตำบล: นับจาก subdistrict_name ที่ดึงมาจาก a_addr.subdistrict
+    n_subdistrict = df['subdistrict_name'].nunique() if 'subdistrict_name' in df.columns else 0
+    
+    # 4. หมู่บ้าน: แนะนำให้นับแบบระบุพิกัด (ตำบล + หมู่) เพื่อความแม่นยำ
+    # เพราะ 'หมู่ 1' มีอยู่ในทุกตำบล ถ้าใช้ .nunique() เฉยๆ จะได้เลขน้อยผิดปกติ
+    if all(col in df.columns for col in ['subdistrict_name', 'village_moo']):
+        n_village = df.groupby(['subdistrict_name', 'village_moo']).size().shape[0]
+    else:
+        n_village = 0
 
     return dbc.Row([
         dbc.Col(render_kpi_card("จังหวัดทั้งหมด", f"{n_province:,}", "จังหวัด", "fa-map-location-dot", "primary"), lg=3, md=6),

@@ -12,7 +12,7 @@ SIDEBAR_STYLE = {
     "z-index": 1000,
 }
 
-def render_single_nav(label, href, icon):
+def render_single_nav(label, href, icon, nav_id=None):
     return html.Div(
         dbc.NavLink(
             [
@@ -20,6 +20,7 @@ def render_single_nav(label, href, icon):
                 html.Span(label, className="fw-medium"),
             ],
             href=href,
+            id=nav_id,
             active="exact",
             className="py-3 px-3 mb-1",
             style={
@@ -59,7 +60,7 @@ def render_sidebar():
             
             dbc.Nav(
                 [
-                    render_single_nav("ข้อมูลภาพรวม", "/overview", "fa-gauge-high"),
+                    render_single_nav("ข้อมูลภาพรวม", "/overview", "fa-gauge-high", "nav-overview"),
 
                     # Accordion: สมาชิก (ปรับแต่งให้เหมือนเมนูหลัก)
                     dbc.Accordion(
@@ -95,8 +96,8 @@ def render_sidebar():
                         }
                     ),
 
-                    render_single_nav("การคำนวณเครดิต", "/credit-score", "fa-calculator"),
-                    render_single_nav("การคาดการณ์", "/performance", "fa-chart-line"),
+                    render_single_nav("การคำนวณเครดิต", "/credit-score", "fa-calculator", "nav-credit"),
+                    render_single_nav("การคาดการณ์", "/performance", "fa-chart-line", "nav-performance"),
                 ],
                 vertical=True, 
                 pills=True,
