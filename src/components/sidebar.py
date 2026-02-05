@@ -96,7 +96,7 @@ def render_sidebar():
                         }
                     ),
 
-                    render_single_nav("การคำนวณเครดิต", "/credit-score", "fa-calculator", "nav-credit"),
+                    render_single_nav("ตรวจสอบข้อมูลสมาชิก", "/credit-score", "fa-calculator", "nav-credit"),
                     render_single_nav("การคาดการณ์", "/performance", "fa-chart-line", "nav-performance"),
                 ],
                 vertical=True, 
