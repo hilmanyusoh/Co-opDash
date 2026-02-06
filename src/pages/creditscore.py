@@ -5,23 +5,20 @@ import pandas as pd
 from ..data_manager import get_member_profile 
 
 # ==================================================
-# 1. Helper Functions
+# 1. Helper Functions (คงเดิม)
 # ==================================================
 def format_value(val, key):
     if val == "-" or val is None or val == "": return "-"
     if key == "account_number": return str(val)
     
-    # 1. ย้ายเงื่อนไข "count" ขึ้นมาไว้ก่อน เพื่อดักจับ late_payment_count
     if any(x in key for x in ["count", "overdue", "installments", "accounts", "months", "inquiries"]):
         try: return f"{int(float(val))} งวด/ครั้ง"
         except: return val
 
-    # 2. เงื่อนไขเปอร์เซ็นต์
     if any(x in key for x in ["pct", "rate"]):
         try: return f"{float(val):,.2f} %"
         except: return val
 
-    # 3. เงื่อนไขจำนวนเงิน (จะทำงานก็ต่อเมื่อไม่ติดเงื่อนไข count ข้างบน)
     if any(x in key for x in ["amount", "income", "balance", "limit", "payment", "approved", "value"]):
         try: return f"{float(val):,.2f} บาท"
         except: return val
@@ -33,7 +30,6 @@ def format_value(val, key):
     return val
 
 def create_info_section(title, fields, data):
-    # ปรับขนาดฟอนต์หัวข้อย่อยให้สอดคล้องกับ Sidebar (14px)
     rows = [
         html.Tr([
             html.Td(html.H6(title, className="text-primary fw-bold mt-3 mb-2 border-bottom pb-1", 
@@ -44,10 +40,8 @@ def create_info_section(title, fields, data):
     for label, key in fields:
         val = format_value(data.get(key, "-"), key)
         rows.append(html.Tr([
-            # Label ใช้ 13px เหมือนเมนูย่อย
             html.Td(label, className="text-muted border-0 ps-3 py-1", 
                     style={"width": "45%", "fontSize": "13px", "fontFamily": "Sarabun"}),
-            # Value ใช้ 14px ตัวหนา
             html.Td(html.B(val, className="text-dark"), className="border-0 py-1", 
                     style={"fontSize": "14px", "fontFamily": "Sarabun"})
         ]))
@@ -58,7 +52,26 @@ def create_info_section(title, fields, data):
 # ==================================================
 
 def create_member_detail_table(data):
-    # ส่วนสรุปคะแนน (H3 สำหรับตัวเลขคะแนนขนาดใหญ่)
+    # --- ส่วนที่ 1: Logic การพิจารณา ---
+    score = data.get('credit_score', 0)
+    income = data.get('monthly_income', 0)
+    
+    if score >= 753: # AA
+        status, color, multiplier = "แนะนำให้อนุมัติ", "success", 5.0
+        advice = "ลูกค้ามีวินัยการเงินสูงมาก แนะนำเสนอวงเงินสูงสุดพร้อมอัตรากำไร"
+    elif score >= 681: # BB, CC, DD
+        status, color, multiplier = "พิจารณาอนุมัติ (ปานกลาง)", "primary", 3.0
+        advice = "ลูกค้ามีความเสี่ยงยอมรับได้ ควรตรวจสอบภาระหนี้ปัจจุบันประกอบการตัดสินใจ"
+    elif score >= 616: # EE, FF, GG
+        status, color, multiplier = "พิจารณาด้วยความระมัดระวัง", "warning", 1.5
+        advice = "ลูกค้ามีความเสี่ยงค่อนข้างสูง แนะนำให้ขอเอกสารค้ำประกันหรือปรับลดวงเงิน"
+    else: # HH
+        status, color, multiplier = "ไม่แนะนำให้อนุมัติ", "danger", 0
+        advice = "ลูกค้ามีประวัติค้างชำระหรือคะแนนต่ำเกินเกณฑ์มาตรฐาน ไม่แนะนำให้สร้างหนี้เพิ่ม"
+
+    estimated_limit = income * multiplier
+
+    # --- ส่วนที่ 2: ผลการประเมินเครดิต (Score Card) ---
     score_fields = [
         ("คะแนนเครดิต", "credit_score"), 
         ("เรตติ้ง", "credit_rating"),
@@ -68,7 +81,7 @@ def create_member_detail_table(data):
     
     score_card = dbc.Card([
         dbc.CardBody([
-            html.H5("1. ผลการประเมินเครดิต", className="text-primary mb-4 fw-bold", 
+            html.H5("ผลการประเมินเครดิต", className="text-primary mb-4 fw-bold ", 
                     style={"fontFamily": "Sarabun", "fontSize": "16px"}),
             dbc.Row([
                 dbc.Col([
@@ -83,8 +96,32 @@ def create_member_detail_table(data):
         ], className="p-4")
     ], className="mb-4 shadow-sm border-0", style={"backgroundColor": "white", "borderRadius": "15px"})
 
+    # --- ส่วนที่ 3: กล่องพิจารณาสินเชื่อ (Recommendation Card) ---
+    recommendation_card = dbc.Card([
+        dbc.CardBody([
+            dbc.Row([
+                # ฝั่งซ้าย: สถานะ
+                dbc.Col([
+                    html.Small("สถานะการพิจารณา", className="text-muted d-block", style={"fontSize": "11px", "fontFamily": "Sarabun"}),
+                    html.Span(status, className=f"text-{color} fw-bold", style={"fontSize": "14px", "fontFamily": "Sarabun"})
+                ], width=4, className="border-end"),
+                
+                # ฝั่งขวา: วงเงิน
+                dbc.Col([
+                    html.Small("วงเงินกู้สูงสุดที่แนะนำ", className="text-muted d-block", style={"fontSize": "11px", "fontFamily": "Sarabun"}),
+                    html.Span(f"{estimated_limit:,.2f} บาท", className="text-dark fw-bold", style={"fontSize": "15px", "fontFamily": "Sarabun"})
+                ], width=8),
+            ], className="align-items-center mb-2"),
+            
+            # หมายเหตุ
+            html.Div([
+                html.Small(f"หมายเหตุ: {advice}", className="text-muted", style={"fontSize": "11px", "fontStyle": "italic", "fontFamily": "Sarabun"})
+            ], className="pt-2 border-top")
+        ], className="p-3")
+    ], className="mb-4 shadow-sm border-0", style={"borderRadius": "12px", "backgroundColor": "#f8f9fa"})
+
+    # --- ส่วนที่ 4: Tabs (คงเดิม) ---
     all_tabs = []
-    # Tab ประวัติส่วนตัว
     all_tabs.append(dbc.Tab(
         dbc.Card([
             dbc.CardBody([
@@ -99,7 +136,6 @@ def create_member_detail_table(data):
         label="ประวัติส่วนตัว", tab_id="tab-personal", label_style={"fontFamily": "Sarabun", "fontSize": "14px", "fontWeight": "600"}
     ))
 
-    # Tab สินเชื่อ
     loan_accounts = data.get('accounts', [])
     for i, account in enumerate(loan_accounts):
         loan_num = i + 1
@@ -126,31 +162,27 @@ def create_member_detail_table(data):
         if loan_num >= 3: break
 
     return html.Div([
-        score_card,
+        score_card,          # 1. แสดงคะแนนก่อน
+        recommendation_card, # 2. แสดงสถานะการพิจารณาต่อท้าย (ด่านล่าง score)
         dbc.Tabs(all_tabs, id="member-detail-tabs", active_tab=None),
         html.Div(id="tab-placeholder", className="mt-3")
     ])
 
 # ==================================================
-# 3. Main Layout
+# 3. Main Layout & 4. Callbacks (คงเดิม)
 # ==================================================
 
 layout = dbc.Container([
-    # หน้าค้นหา: ลบ Background Card ออก และใช้สีพื้นหลังระบบเต็มหน้าจอ
     html.Div([
-        # ส่วนหัวข้อ (ขยับตำแหน่งให้ตรงกับสายตาในหน้า Overview)
         dbc.Row([
             dbc.Col([
                 html.H2("ตรวจสอบข้อมูลสมาชิก", className="fw-bold mb-5", 
                         style={"fontFamily": "Sarabun", "fontSize": "32px","marginTop": "80px", "color": "#1e293b"}),
             ], width=12, className="text-center")
         ]),
-        
-        # ส่วนกล่องค้นหา: ไม่มี Background (โปร่งใส) และจัดระยะขอบตามรูปที่ 2
         dbc.Row([
             dbc.Col([
                 html.Div([
-                    # กล่อง Input ทรงมน (Pill Shape)
                     dbc.InputGroup([
                         dbc.Input(
                             id="national-id-input", 
@@ -163,7 +195,7 @@ layout = dbc.Container([
                                 "border": "1px solid #e2e8f0",
                                 "borderRadius": "35px 0 0 35px",
                                 "paddingLeft": "30px",
-                                "backgroundColor": "#ffffff" # เฉพาะช่องกรอกที่เป็นสีขาว
+                                "backgroundColor": "#ffffff"
                             }
                         ),
                         dbc.Button(
@@ -179,22 +211,12 @@ layout = dbc.Container([
                             }
                         ),
                     ], className="shadow-sm", style={"borderRadius": "35px"}),
-
-                    # แถบแสดงชื่อ (จะแสดงผลแบบโปร่งใสหรือมีกรอบมนตามการค้นหา)
                     html.Div(id="member-name-display", className="mt-4")
-                    
-                ], style={"backgroundColor": "transparent"}) # ข้อ 1-3: ลบพื้นหลังส่วนค้นหาออก
-            ], 
-            # ข้อ 4: จัดระยะขอบซ้าย-ขวา (Padding) ให้เท่ากับหน้า Overview (รูปที่ 2)
-            width=12, 
-            lg=10, 
-            xl=9, 
-            className="mx-auto px-4 px-md-5" 
-            )
+                ], style={"backgroundColor": "transparent"})
+            ], width=12, lg=10, xl=9, className="mx-auto px-4 px-md-5")
         ], justify="center"),
     ], id="search-page", style={"minHeight": "100vh", "paddingBottom": "100px"}),
 
-    # หน้าแสดงรายงาน (ซ่อนไว้)
     html.Div([
         dbc.Row([
             dbc.Col([
@@ -204,19 +226,9 @@ layout = dbc.Container([
         ]),
     ], id="detail-page", style={"display": "none", "padding": "40px 20px"})
 
-], fluid=True, style={
-    "minHeight": "100vh", 
-    "fontFamily": "Noto Sans Thai",
-    "padding": "0"
-})
-
-
-# ==================================================
-# 4. Callbacks
-# ==================================================
+], fluid=True, style={"minHeight": "100vh", "fontFamily": "Noto Sans Thai", "padding": "0"})
 
 def register_callbacks(app):
-    # 1. จัดการการค้นหา และ รีเซ็ตหน้าจอเมื่อมีการค้นหาใหม่
     @app.callback(
         [Output("member-name-display", "children"),
          Output("search-page", "style"),
@@ -230,8 +242,6 @@ def register_callbacks(app):
             return dash.no_update, {"display": "block", "minHeight": "100vh", "paddingBottom": "100px"}, {"display": "none"}
             
         data = get_member_profile(nid)
-        
-        # เมื่อกดค้นหาใหม่ เราต้องบังคับให้หน้าค้นหาแสดง (block) และหน้าผลลัพธ์ซ่อน (none) ก
         search_page_style = {"display": "block", "minHeight": "100vh", "paddingBottom": "100px"}
         detail_page_style = {"display": "none"}
         
@@ -240,8 +250,7 @@ def register_callbacks(app):
                 html.Div([
                     html.Div([
                         html.Span("ชื่อ: ", style={"fontFamily": "Sarabun", "fontSize": "20px", "color": "#64748b"}),
-                        html.Span(data.get('borrower_name'), 
-                                 style={"fontFamily": "Sarabun", "fontSize": "20px"})
+                        html.Span(data.get('borrower_name'), style={"fontFamily": "Sarabun", "fontSize": "20px"})
                     ]),
                     dbc.Button(
                         "ดูประวัติและคะแนนเครดิต", 
@@ -263,7 +272,6 @@ def register_callbacks(app):
         return dbc.Alert("ไม่พบข้อมูลสมาชิก", color="danger", className="mt-4 text-center", 
                         style={"borderRadius": "30px", "fontFamily": "Sarabun"}), search_page_style, detail_page_style
 
-    # 2. จัดการการเปลี่ยนหน้าจอไปแสดงรายงาน (เมื่อกดปุ่มดูประวัติ)
     @app.callback(
         [Output("search-page", "style", allow_duplicate=True), 
          Output("detail-page", "style", allow_duplicate=True), 
@@ -276,11 +284,9 @@ def register_callbacks(app):
         if n and nid:
             data = get_member_profile(nid)
             if data:
-                # สลับหน้า: ซ่อนหน้าค้นหา (none) แสดงหน้ารายงาน (block)
                 return {"display": "none"}, {"display": "block", "padding": "40px 20px"}, create_member_detail_table(data)
         return dash.no_update, dash.no_update, dash.no_update
 
-    # 3. จัดการ Tab (เหมือนเดิม)
     @app.callback(
         Output("tab-placeholder", "children"),
         Input("member-detail-tabs", "active_tab")
