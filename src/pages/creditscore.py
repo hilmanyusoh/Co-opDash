@@ -488,7 +488,7 @@ def register_callbacks(app):
                 return {"display": "none"}, {"display": "block", "padding": "40px 20px"}, create_member_detail_table(data)
         return dash.no_update, dash.no_update, dash.no_update
 
-    # 3. 🔥 ใหม่: จัดการการแสดงผลเนื้อหาในแต่ละ Tab
+    # 3. ใหม่: จัดการการแสดงผลเนื้อหาในแต่ละ Tab
     @app.callback(
         Output("member-tab-content", "children"),
         [Input("member-detail-tabs", "active_tab")],
