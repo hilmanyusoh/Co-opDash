@@ -99,7 +99,7 @@ def create_credit_score_hero(data):
                             html.Span(str(score), className="display-1 fw-bold text-white mb-0",
                                      style={"fontFamily": "Sarabun", "fontSize": "72px", "lineHeight": "1"}),
                             html.Div([
-                                html.Span("/ 850", className="text-white ms-2", 
+                                html.Span("/ 900", className="text-white ms-2", 
                                          style={"fontSize": "18px", "fontFamily": "Sarabun", "opacity": "0.8"})
                             ], className="d-inline-block align-bottom mb-3")
                         ]),
