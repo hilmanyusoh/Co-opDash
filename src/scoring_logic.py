@@ -92,6 +92,7 @@ class CreditScoreCalculator:
         inq_12m = data.get('inquiries_12m', 0)
         penalty = (min(inq_6m * 10, 50)) + (min((inq_12m - inq_6m) * 5, 50))
         return max(0, score - penalty)
+    
 
 #คะแนน NCB
     def get_credit_rating(self, score):
